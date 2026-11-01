@@ -33,6 +33,10 @@ from .plan import (
     SPLIT_VIEW_MODES,
     STRATEGY_HELP,
     TAB_GROUP_MODES,
+    ZEN_STRATEGY_HELP,
+    TARGET_NAMES,
+    TARGETS,
+    ZEN_MAX_SUBFOLDERS,
     FolderOverride,
     Plan,
     SpacePlan,
@@ -80,6 +84,14 @@ def _pairs(values: Optional[List[str]], what: str) -> List[tuple]:
 # --------------------------------------------------------------------------- plan building
 
 def build_plan(sb: Sidebar, args, source_path: str, sha: str) -> Plan:
+    target = getattr(args, "target", None) or "dia"
+    zen = target == "zen"
+    depth_arg = getattr(args, "max_folder_depth", None)
+    if depth_arg is not None and not zen:
+        raise Arc2DiaError("--max-folder-depth only applies to --target zen")
+    if depth_arg is not None and depth_arg < 0:
+        raise Arc2DiaError("--max-folder-depth must be 0 (no limit) or more")
+    max_depth = (ZEN_MAX_SUBFOLDERS if depth_arg is None else (depth_arg or None)) if zen else None
     space_strats = _pairs(getattr(args, "space", None), "--space")
     overrides = _pairs(getattr(args, "override", None), "--override")
     excluded = set(getattr(args, "exclude_space", None) or [])
@@ -104,7 +116,8 @@ def build_plan(sb: Sidebar, args, source_path: str, sha: str) -> Plan:
             if name in (space.title, space.id):
                 strategy = strat
         if strategy is None:
-            strategy = args.strategy or ("path-names" if nested else "keep")
+            # Dia flattens nested folders, so path-names keeps their names; Zen keeps nesting.
+            strategy = args.strategy or ("path-names" if nested and not zen else "keep")
         sp = SpacePlan(
             space_id=space.id,
             title=space.title,
@@ -115,8 +128,8 @@ def build_plan(sb: Sidebar, args, source_path: str, sha: str) -> Plan:
             open_tabs=args.open_tabs,
             open_tabs_folder_name=args.open_tabs_folder,
             open_tabs_split_views=args.split_views,
-            open_tabs_tab_groups=args.tab_groups,
-            pinned_wrappers="keep" if args.keep_pinned_wrappers else "unwrap",
+            open_tabs_tab_groups=args.tab_groups or ("subfolders" if zen else "flatten"),
+            pinned_wrappers="keep" if args.keep_pinned_wrappers else ("folders" if zen else "unwrap"),
             drop_empty_folders=not args.keep_empty_folders,
             non_web=args.non_web,
             merge_bookmark_folders=not args.no_merge_bookmark_folders,
@@ -129,13 +142,45 @@ def build_plan(sb: Sidebar, args, source_path: str, sha: str) -> Plan:
     for path, _ in overrides:
         if path not in matched_overrides:
             raise Arc2DiaError(f'--override: no pinned folder matches "{path}" in any space')
-    return Plan(spaces=spaces, source_path=source_path, source_sha256=sha)
+    return Plan(spaces=spaces, source_path=source_path, source_sha256=sha, target=target, max_folder_depth=max_depth)
 
 
 def annotated_plan_json(sb: Sidebar, plan: Plan) -> dict:
     """The plan plus informational ``_`` keys that help when editing it by hand."""
     data = plan.to_json()
-    data["_help"] = {
+    data["_help"] = _plan_help(plan.target)
+    return _annotate_spaces(sb, plan, data)
+
+
+def _plan_help(target: str) -> dict:
+    if target == "zen":
+        return {
+            "target": "zen: the cleaned file is meant for Zen's Arc importer (Zen 1.24 or later)",
+            "max_folder_depth": f"pinned folders deeper than this are merged into their parent, as Zen does "
+                                f"(its pref zen.folders.max-subfolders, {ZEN_MAX_SUBFOLDERS} by default); raise both "
+                                "together, or null for no limit here",
+            "folder_strategy": ZEN_STRATEGY_HELP,
+            "folder_overrides": 'list of {"path": "A › B", "strategy": ...} or {"folder_id": ..., "strategy": ...}; '
+                                "top-level folders take any strategy, nested folders only to-bookmarks",
+            "import": "false leaves the space out of the import (Zen creates no space for it)",
+            "open_tabs": {"pinned-folder": "move open tabs into one new pinned folder (default)",
+                          "bookmarks": "export open tabs to bookmarks.html",
+                          "leave": "do nothing; Zen's importer will skip them"},
+            "open_tabs_split_views": "flatten: split views become their separate tabs; keep: leave them (Zen "
+                                     "replaces a split view with its tabs anyway)",
+            "open_tabs_tab_groups": "subfolders: one subfolder per tab group (default for Zen); flatten: tabs from "
+                                    "Arc tab groups go straight into the open-tabs folder, in order",
+            "pinned_wrappers": "folders: tab groups in the pinned area become folders with the same names, because "
+                               "Zen's importer drops tab groups (default for Zen); unwrap: split views and tab "
+                               "groups are replaced by their tabs; keep: leave them as they are",
+            "merge_bookmark_folders": "in bookmarks.html, merge sibling folders with the same name and keep one copy "
+                                      "of a URL per folder",
+            "non_web": "keep: leave non-web links (Zen keeps file: and ftp: and skips the rest, such as "
+                       "javascript:); to-bookmarks: export every non-http(s) link to bookmarks.html",
+            "dedupe_trees": "remove folder trees whose URLs all exist in another folder with the same name",
+            "dedupe_urls": "remove repeated URLs in the pinned area, keeping the first copy",
+        }
+    return {
         "folder_strategy": STRATEGY_HELP,
         "folder_overrides": 'list of {"path": "A › B", "strategy": ...} or {"folder_id": ..., "strategy": ...}; '
                             "top-level folders take any strategy, nested folders only to-bookmarks",
@@ -156,6 +201,9 @@ def annotated_plan_json(sb: Sidebar, plan: Plan) -> dict:
         "dedupe_trees": "remove folder trees whose URLs all exist in another folder with the same name",
         "dedupe_urls": "remove repeated URLs in the pinned area, keeping the first copy",
     }
+
+
+def _annotate_spaces(sb: Sidebar, plan: Plan, data: dict) -> dict:
     for sp_json in data["spaces"]:
         space = sb.space(sp_json["space_id"])
         if space is None:
@@ -194,8 +242,13 @@ def _n(count: int, word: str) -> str:
 def render_plan_summary(data: dict) -> str:
     lines: List[str] = []
     add = lines.append
+    target = data.get("target", "dia")
+    browser = TARGET_NAMES.get(target, "Dia")
+    add(f"Target: {browser}"
+        + (f" (pinned folders deeper than {data['max_folder_depth']} levels are merged into their parent)"
+           if target == "zen" and data.get("max_folder_depth") else ""))
     add("Folder strategies:")
-    for name, desc in STRATEGY_HELP.items():
+    for name, desc in (ZEN_STRATEGY_HELP if target == "zen" else STRATEGY_HELP).items():
         add(f"  {name:<13} {desc}")
     for sp in data["spaces"]:
         about = sp.get("_about", {})
@@ -204,7 +257,8 @@ def render_plan_summary(data: dict) -> str:
             f'max depth {about.get("max_depth", 0)}), {about.get("pinned_tabs", 0)} pinned tabs, '
             f'{about.get("open_tabs", 0)} open tabs')
         if not sp["import"]:
-            add("  import: false (no Dia profile will be created for this space)")
+            add("  import: false (" + ("Zen creates no space for it)" if target == "zen"
+                                       else "no Dia profile will be created for this space)"))
             continue
         add(f"  chosen folder_strategy: {sp['folder_strategy']}")
         for ov in sp["folder_overrides"]:
@@ -225,9 +279,14 @@ def render_plan_summary(data: dict) -> str:
         if about.get("pinned_wrapped_tabs"):
             held = [_n(about.get(k, 0), w) for k, w in (("pinned_split_views", "split view"),
                                                          ("pinned_tab_groups", "tab group")) if about.get(k)]
-            add(f"  pinned split views and tab groups: {sp.get('pinned_wrappers', 'unwrap')} "
-                f"({', '.join(held)} holding {_n(about['pinned_wrapped_tabs'], 'tab')}; "
-                "Dia's importer drops the tabs inside them)")
+            if target == "zen":
+                add(f"  pinned split views and tab groups: {sp.get('pinned_wrappers', 'folders')} "
+                    f"({', '.join(held)} holding {_n(about['pinned_wrapped_tabs'], 'tab')}; Zen's importer "
+                    "drops tab groups and replaces split views with their tabs)")
+            else:
+                add(f"  pinned split views and tab groups: {sp.get('pinned_wrappers', 'unwrap')} "
+                    f"({', '.join(held)} holding {_n(about['pinned_wrapped_tabs'], 'tab')}; "
+                    "Dia's importer drops the tabs inside them)")
         add(f"  dedupe_trees: {str(sp['dedupe_trees']).lower()}, dedupe_urls: {str(sp['dedupe_urls']).lower()}, "
             f"drop_empty_folders: {str(sp['drop_empty_folders']).lower()}, non_web: {sp['non_web']}")
         for d in about.get("duplicate_trees", []):
@@ -275,6 +334,9 @@ def cmd_prepare(args, deps: Deps) -> int:
     sb, sha, path = _load_sidebar(args.sidebar)
     if args.plan:
         plan = load_plan(args.plan)
+        if args.target and args.target != plan.target:
+            raise Arc2DiaError(f"the plan {args.plan} is for {plan.target_name}, not {TARGET_NAMES[args.target]}; "
+                               f"make a new one with `{PROG} plan --target {args.target}`")
         changed = [opt for opt, attr, default in _PLAN_OPTION_DEFAULTS if getattr(args, attr) != default]
         if changed:
             print(f"{PROG}: note: --plan is given, so {', '.join(changed)} "
@@ -327,6 +389,9 @@ def cmd_verify(args, deps: Deps) -> int:
     expected = original
     if args.prepared:
         manifest = load_manifest(args.prepared)
+        if manifest.get("target", "dia") != "dia":
+            raise Arc2DiaError("verify compares with Dia; for a Zen import, check each space against the "
+                               '"Zen, after" lines in the prepare report (report.txt)')
         cleaned_path = expand(args.prepared) / manifest.get("cleaned_file", CLEANED_NAME)
         expected = Sidebar.load(cleaned_path)
         mode = "prepared"
@@ -373,7 +438,8 @@ _PLAN_OPTION_DEFAULTS = [
     ("--open-tabs", "open_tabs", "pinned-folder"),
     ("--open-tabs-folder", "open_tabs_folder", DEFAULT_OPEN_TABS_FOLDER),
     ("--split-views", "split_views", "flatten"),
-    ("--tab-groups", "tab_groups", "flatten"),
+    ("--tab-groups", "tab_groups", None),
+    ("--max-folder-depth", "max_folder_depth", None),
     ("--keep-pinned-wrappers", "keep_pinned_wrappers", False),
     ("--no-merge-bookmark-folders", "no_merge_bookmark_folders", False),
     ("--keep-empty-folders", "keep_empty_folders", False),
@@ -383,8 +449,11 @@ _PLAN_OPTION_DEFAULTS = [
 
 def _add_plan_options(p: argparse.ArgumentParser) -> None:
     g = p.add_argument_group("plan options (defaults shown in brackets)")
+    g.add_argument("--target", choices=TARGETS,
+                   help="browser that will import the cleaned file [dia; with --plan, the plan's own target]")
     g.add_argument("--strategy", choices=FOLDER_STRATEGIES,
-                   help="folder strategy for every space [path-names when a space has nested folders, else keep]")
+                   help="folder strategy for every space [Dia: path-names when a space has nested folders, "
+                        "else keep; Zen: keep]")
     g.add_argument("--space", action="append", metavar="SPACE=STRATEGY",
                    help="folder strategy for one space, by title or id (repeatable)")
     g.add_argument("--override", action="append", metavar="PATH=STRATEGY",
@@ -401,11 +470,16 @@ def _add_plan_options(p: argparse.ArgumentParser) -> None:
                    help=f'name of the folder for open tabs ["{DEFAULT_OPEN_TABS_FOLDER}"]')
     g.add_argument("--split-views", choices=SPLIT_VIEW_MODES, default="flatten",
                    help="split views among open tabs [flatten]")
-    g.add_argument("--tab-groups", choices=TAB_GROUP_MODES, default="flatten",
-                   help="Arc tab groups among open tabs: flatten into the open-tabs folder, or one subfolder each [flatten]")
+    g.add_argument("--tab-groups", choices=TAB_GROUP_MODES,
+                   help="Arc tab groups among open tabs: flatten into the open-tabs folder, or one subfolder each "
+                        "[Dia: flatten; Zen: subfolders]")
     g.add_argument("--keep-pinned-wrappers", action="store_true",
                    help="leave split views and tab groups in the pinned area as they are; Dia's importer drops "
-                        "the tabs inside them [they are unwrapped into their tabs]")
+                        "the tabs inside both, Zen's the tabs inside tab groups [Dia: they are unwrapped into "
+                        "their tabs; Zen: tab groups become folders]")
+    g.add_argument("--max-folder-depth", type=int, metavar="N",
+                   help="Zen only: merge pinned folders deeper than N levels into their parent, as Zen does; set "
+                        f"Zen's zen.folders.max-subfolders to the same N; 0 for no limit [{ZEN_MAX_SUBFOLDERS}]")
     g.add_argument("--keep-empty-folders", action="store_true", help="keep folders with no tabs [they are dropped]")
     g.add_argument("--no-merge-bookmark-folders", action="store_true",
                    help="in bookmarks.html, keep same-named sibling folders apart [they are merged]")
@@ -416,8 +490,8 @@ def _add_plan_options(p: argparse.ArgumentParser) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog=PROG,
-        description="Move an Arc sidebar to Dia without losing open tabs or nested folders. "
-                    "Workflow: scan, plan, prepare, swap, (Dia import), restore, verify.",
+        description="Move an Arc sidebar to Dia or Zen without losing open tabs or nested folders. "
+                    "Workflow: scan, plan, prepare, swap, (import in Dia or Zen), restore, verify (Dia only).",
     )
     parser.add_argument("--version", action="version", version=f"{PROG} {__version__}")
     sub = parser.add_subparsers(dest="command", metavar="COMMAND")

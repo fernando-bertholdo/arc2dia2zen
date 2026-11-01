@@ -1,5 +1,8 @@
 """The plan file: per-space choices that ``prepare`` applies. Stored as JSON.
 
+A plan is made for one target browser, Dia or Zen; plans from before 0.3.0 have no target and
+are for Dia. The target changes some defaults and what the reports predict.
+
 Keys that start with an underscore are informational (counts, what-if numbers, folder
 lists) and are ignored when the plan is loaded, so they can be left in place or deleted.
 """
@@ -15,11 +18,17 @@ from .errors import PlanError
 
 PLAN_VERSION = 1
 
+TARGETS = ("dia", "zen")
+TARGET_NAMES = {"dia": "Dia", "zen": "Zen"}
+# Zen keeps nested pinned folders up to this many levels (pref zen.folders.max-subfolders) and
+# merges deeper ones into their parent.
+ZEN_MAX_SUBFOLDERS = 5
+
 FOLDER_STRATEGIES = ("keep", "path-names", "merge-to-top", "to-bookmarks")
 OPEN_TABS_MODES = ("pinned-folder", "bookmarks", "leave")
 SPLIT_VIEW_MODES = ("flatten", "keep")
 TAB_GROUP_MODES = ("flatten", "subfolders")
-PINNED_WRAPPER_MODES = ("unwrap", "keep")
+PINNED_WRAPPER_MODES = ("unwrap", "folders", "keep")
 NON_WEB_MODES = ("keep", "to-bookmarks")
 
 DEFAULT_OPEN_TABS_FOLDER = "Open tabs from Arc"
@@ -29,6 +38,13 @@ STRATEGY_HELP = {
     "keep": "leave folders as they are; Dia turns every folder, nested or not, into its own flat pinned group",
     "path-names": 'one flat group per folder that holds tabs, named after its full path ("A › B › C")',
     "merge-to-top": "one group per top-level folder; tabs from its subfolders are merged into it",
+    "to-bookmarks": "take the folder out of the sidebar and export it, nested, to bookmarks.html",
+}
+
+ZEN_STRATEGY_HELP = {
+    "keep": "leave folders as they are; Zen keeps them nested, up to max_folder_depth levels",
+    "path-names": 'one flat folder per folder that holds tabs, named after its full path ("A › B › C")',
+    "merge-to-top": "one folder per top-level folder; tabs from its subfolders are merged into it",
     "to-bookmarks": "take the folder out of the sidebar and export it, nested, to bookmarks.html",
 }
 
@@ -109,6 +125,12 @@ class Plan:
     source_sha256: str = ""
     path_separator: str = DEFAULT_PATH_SEPARATOR
     version: int = PLAN_VERSION
+    target: str = "dia"
+    max_folder_depth: Optional[int] = None  # Zen only: deeper pinned folders are merged into their parent
+
+    @property
+    def target_name(self) -> str:
+        return TARGET_NAMES[self.target]
 
     def for_space(self, space_id: str) -> Optional[SpacePlan]:
         for sp in self.spaces:
@@ -117,12 +139,16 @@ class Plan:
         return None
 
     def to_json(self) -> dict:
-        return {
+        out: Dict[str, Any] = {
             "arc2dia2zen_plan_version": self.version,
+            "target": self.target,
             "source": {"path": self.source_path, "sha256": self.source_sha256},
             "path_separator": self.path_separator,
-            "spaces": [sp.to_json() for sp in self.spaces],
         }
+        if self.target == "zen":
+            out["max_folder_depth"] = self.max_folder_depth
+        out["spaces"] = [sp.to_json() for sp in self.spaces]
+        return out
 
 
 # --------------------------------------------------------------------------- loading
@@ -133,7 +159,8 @@ _SPACE_KEYS = {
     "drop_empty_folders", "non_web", "merge_bookmark_folders",
 }
 # "arc2dia_plan_version" is the key plans had before the rename to arc2dia2zen (0.2.0).
-_TOP_KEYS = {"arc2dia2zen_plan_version", "arc2dia_plan_version", "source", "path_separator", "spaces"}
+_TOP_KEYS = {"arc2dia2zen_plan_version", "arc2dia_plan_version", "target", "max_folder_depth", "source",
+             "path_separator", "spaces"}
 
 
 def _check_keys(obj: dict, allowed: set, where: str) -> None:
@@ -214,6 +241,15 @@ def plan_from_json(data: Any) -> Plan:
     version = data.get("arc2dia2zen_plan_version", data.get("arc2dia_plan_version"))
     if version != PLAN_VERSION:
         raise PlanError(f"plan: arc2dia2zen_plan_version must be {PLAN_VERSION}, got {version!r}")
+    target = _enum(data.get("target", "dia"), TARGETS, "plan.target")
+    if target == "zen":
+        depth = data.get("max_folder_depth", ZEN_MAX_SUBFOLDERS)
+        if depth is not None and (isinstance(depth, bool) or not isinstance(depth, int) or depth < 1):
+            raise PlanError(f"plan.max_folder_depth: expected a whole number of 1 or more, or null, got {depth!r}")
+    else:
+        depth = None
+        if data.get("max_folder_depth") is not None:
+            raise PlanError("plan.max_folder_depth only applies to target zen")
     spaces_raw = data.get("spaces")
     if not isinstance(spaces_raw, list):
         raise PlanError("plan: spaces must be a list")
@@ -230,6 +266,8 @@ def plan_from_json(data: Any) -> Plan:
         source_path=str(source.get("path") or ""),
         source_sha256=str(source.get("sha256") or ""),
         path_separator=_str(sep, "plan.path_separator", allow_empty=False) if sep != DEFAULT_PATH_SEPARATOR else sep,
+        target=target,
+        max_folder_depth=depth,
     )
 
 

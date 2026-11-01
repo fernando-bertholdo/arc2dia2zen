@@ -5,5 +5,5 @@ The package name, the command name and the user-facing program name all come fro
 editing ``pyproject.toml``.
 """
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 PROG = "arc2dia2zen"
