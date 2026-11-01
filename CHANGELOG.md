@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.3.0 (2026-11-01)
+
+First step towards Zen: `prepare --target zen` writes a copy for Zen's own Arc importer (Zen 1.24
+and later).
+
+- `arc2dia2zen/zen.py` ports `parseArcSidebar` and `#applyItems` from Zen's
+  `ZenMigrationUtils.sys.mjs` (dev at 147e6ebb2). Against Zen 1.25t, on the synthetic example and a
+  real sidebar, it gives the same result as Zen's own parser for the original and the cleaned file.
+- `plan` and `prepare` take `--target dia|zen`. The plan file records `target` (plans without it are
+  for Dia) and, for Zen, `max_folder_depth` (5, null for no limit; `--max-folder-depth N`, 0 for
+  none).
+- Zen defaults: `folder_strategy: keep`; open tabs go into a pinned folder with Arc tab groups as
+  subfolders; and `pinned_wrappers: folders`, a new mode that turns pinned tab groups into folders
+  with the same names and leaves split views to Zen.
+- `prepare` merges pinned folders deeper than `max_folder_depth` into their folder at that level, in
+  order, as Zen would, and lists them in the report.
+- The report ("Zen, before" and "Zen, after"), the ledger (`zen_note`), validation, the manifest
+  (`target`, `max_folder_depth`) and the steps `swap` prints follow the target. `verify` reads Dia
+  only and says so when given a Zen preparation.
+
 ## 0.2.0 (2026-11-01)
 
 Renamed to arc2dia2zen. Arc, Dia and Zen are close enough to share one community, and Zen
