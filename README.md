@@ -1,10 +1,12 @@
 # arc2dia2zen
 
-Move your Arc sidebar to Dia without losing your open tabs or the shape of your nested folders.
+Move your Arc sidebar to Dia, or to Zen (preview), without losing your open tabs or the shape of
+your nested folders.
 
 Until 0.2.0 this was arc2dia. The new name is for what comes next: Arc, Dia and Zen are close
-enough to share one community, and Zen Browser support is in progress. Today the tool moves Arc
-to Dia, and `python3 -m arc2dia` still works for a while as an alias.
+enough to share one community. Since 0.3.0, `--target zen` prepares the file for Zen's own Arc
+importer ([Zen Browser](#zen-browser-preview) below). `python3 -m arc2dia` still works for a while
+as an alias.
 
 arc2dia2zen is a small command-line tool for macOS. It does not replace Dia's own Arc importer: it
 prepares a cleaned copy of Arc's sidebar file, lets the official importer read that copy, and then
@@ -32,6 +34,36 @@ python3 -m arc2dia2zen verify --prepared arc2dia2zen-out
 ```
 
 Read "The safe workflow" below before running `swap` for real.
+
+## Zen Browser (preview)
+
+Zen 1.24 and later import Arc on their own. The importer's source (`ZenMigrationUtils.sys.mjs`)
+shows what it leaves behind, and `prepare --target zen` changes the copy so those things come along:
+
+| Zen's importer | What `prepare --target zen` does |
+| --- | --- |
+| Reads only the pinned area, so open tabs stay in Arc | Moves each space's open tabs into a pinned folder, "Open tabs from Arc", with Arc tab groups as subfolders |
+| Drops Arc tab groups and the tabs in them | Turns pinned tab groups into folders with the same names |
+| Merges folders deeper than `zen.folders.max-subfolders` (5) into their parent | Does the same merge in the copy and lists it in the report (`--max-folder-depth`) |
+| Keeps nested folders and turns split views into their tabs | Leaves both alone |
+| Skips URLs that aren't http, https, file or ftp | Counts them in the report |
+
+```sh
+python3 -m arc2dia2zen plan --target zen      # writes arc2dia2zen-plan.json
+python3 -m arc2dia2zen prepare --plan arc2dia2zen-plan.json
+# quit Arc, then:
+python3 -m arc2dia2zen swap --apply           # ends with the steps for Zen's import
+# import in Zen, then:
+python3 -m arc2dia2zen restore --apply
+```
+
+The "Zen, before" and "Zen, after" lines of the report come from a port of Zen's parser in
+`arc2dia2zen/zen.py`. I checked it against Zen 1.25t (Twilight, build 20261031100347): on the
+synthetic example and on a real sidebar with 6 spaces, the port and Zen's own `parseArcSidebar` gave
+the same result, item for item, for the original file and for the cleaned one.
+
+Not there yet: putting the open tabs back as open tabs after the import, cookies, and a `verify`
+for Zen. `verify` still reads Dia only.
 
 ## Use it as an Agent Skill
 
@@ -352,7 +384,8 @@ so the test profiles land in a throwaway Dia.
 
 The code lives in `arc2dia2zen/`: `model.py` (file format), `analysis.py` (scan and prediction),
 `plan.py`, `transform.py` (the strategies), `bookmarks.py`, `validate.py`, `prepare.py`,
-`swap.py`, `dia.py` (AppleScript), `verify.py` and `cli.py`.
+`swap.py`, `dia.py` (AppleScript), `verify.py`, `zen.py` (the port of Zen's Arc importer) and
+`cli.py`.
 
 ## License
 
