@@ -1,5 +1,5 @@
-"""``swap``, ``restore`` and ``status``: put the cleaned sidebar in place for Dia's importer and
-put the original back afterwards. Nothing is ever deleted: files are moved into a
+"""``swap``, ``restore`` and ``status``: put the cleaned sidebar in place for Dia's or Zen's
+importer and put the original back afterwards. Nothing is ever deleted: files are moved into a
 timestamped backup folder, and the original is copied back from there (the backup stays)."""
 
 from __future__ import annotations
@@ -111,6 +111,8 @@ def swap(sidebar_path, prepared_dir, backup_root, apply: bool, checker: ProcessC
             f"{sidebar} already is the cleaned file, but no active swap is recorded in {backup_root}. "
             f"Check `{PROG} status` before going on."
         )
+    target = manifest.get("target", "dia")
+    browser = "Zen" if target == "zen" else "Dia"
     other_source = current != manifest["source_sha256"]
     if other_source and not allow_other_source:
         raise SafetyError(
@@ -124,7 +126,7 @@ def swap(sidebar_path, prepared_dir, backup_root, apply: bool, checker: ProcessC
     if other_source:
         lines.append(
             "TEST MODE (--allow-other-source): the cleaned file was prepared from a different sidebar, "
-            "so Dia will import that other data. Your current Arc file is still backed up and restored."
+            f"so {browser} will import that other data. Your current Arc file is still backed up and restored."
         )
     lines += [
         f"Swap plan for {sidebar}:",
@@ -157,6 +159,7 @@ def swap(sidebar_path, prepared_dir, backup_root, apply: bool, checker: ProcessC
         "cleaned_sha256": manifest["cleaned_sha256"],
         "prepared_dir": str(prepared),
         "other_source": other_source,
+        "target": target,
     }
     write_json(backup_dir / SWAP_RECORD, record)
 
@@ -187,7 +190,10 @@ def swap(sidebar_path, prepared_dir, backup_root, apply: bool, checker: ProcessC
     lines.append("")
     lines.append(f"Done. The original is safe in {original_backup}.")
     lines.append("")
-    lines.extend(dia_import_steps(prepared))
+    if target == "zen":
+        lines.extend(zen_import_steps(prepared, manifest.get("max_folder_depth")))
+    else:
+        lines.extend(dia_import_steps(prepared))
     return lines
 
 
@@ -228,6 +234,42 @@ def dia_import_steps(prepared: Optional[Path] = None) -> List[str]:
         "   load when clicked; do not open them all at once.",
         f"3. Put the original sidebar back: {PROG} restore --apply",
         f"4. Check the result: {verify}",
+        "5. Only now open Arc again.",
+    ]
+
+
+def zen_import_steps(prepared: Optional[Path] = None, max_folder_depth: Optional[int] = 5) -> List[str]:
+    report = f" ({prepared / 'report.txt'})" if prepared else ""
+    depth = [
+        f"   zen.folders.max-subfolders = {max_folder_depth}   (the plan's max_folder_depth; Zen merges",
+        "                                     deeper folders into their parent)",
+    ] if max_folder_depth and max_folder_depth != 5 else []
+    if max_folder_depth is None:
+        depth = ["   zen.folders.max-subfolders = as deep as your folders go (the plan has no max_folder_depth,",
+                 "                                     and Zen merges folders deeper than this into their parent)"]
+    return [
+        "Import into Zen now. Keep Arc quit until step 3 is done.",
+        *ARC_QUIT_NOTES,
+        f"Run `{PROG} status` right before and right after the import: it must show \"Arc: not running\"",
+        "and no WARNING line. If Arc is running, quit it with Arc > Quit Arc; if the file changed,",
+        "restore first and start again from plan.",
+        "",
+        "Zen imports Arc from version 1.24 on. A new Zen profile is the safest place for it: each",
+        "import adds spaces and never merges into the ones you have.",
+        "",
+        "1. In Zen, open about:config and set:",
+        "   zen.welcome-screen.seen = true      (the welcome screen rearranges the tabs of a new profile)",
+        *depth,
+        "   On a Zen build older than 31 Oct 2026, also zen.migration.bookmarks-as-pinned-folders = false:",
+        "   those builds also turn Arc's bookmarks into pinned folders, which repeats the sidebar.",
+        "   Optional, for more history: raise browser.migrate.chrome.history.limit (2000 entries) and",
+        "   browser.migrate.chrome.history.maxAgeInDays (180 days).",
+        "2. Import: Settings > General > Import Browser Data (or File > Import From Another Browser...),",
+        "   choose Arc and keep spaces selected. Pinned tabs come in unloaded and load when clicked; each",
+        "   space's open tabs are in its pinned folder for them.",
+        f"3. Wait until every space is there, then put the original sidebar back: {PROG} restore --apply",
+        f"4. Check each space against the \"Zen, after\" lines of the prepare report{report}.",
+        f"   `{PROG} verify` reads Dia only for now.",
         "5. Only now open Arc again.",
     ]
 
@@ -358,8 +400,9 @@ def _active_swap_checks(bdir: Path, current: Optional[str], arc_running: Optiona
         lines.append("WARNING: the sidebar file is missing while a swap is active. "
                      f"Quit Arc, then run `{PROG} restore --apply`.")
     elif current == record.get("original_sha256"):
+        browser = "Zen" if record.get("target") == "zen" else "Dia"
         lines.append("WARNING: the sidebar file is the original again, not the cleaned copy, but the swap is "
-                     f"still recorded. Do not run Dia's import now; run `{PROG} restore --apply` to close it.")
+                     f"still recorded. Do not run {browser}'s import now; run `{PROG} restore --apply` to close it.")
     else:
         lines.append("WARNING: the sidebar file no longer matches the installed cleaned copy. Arc or another "
                      f"program wrote the file; quit Arc, then restore (`{PROG} restore --apply`).")

@@ -15,6 +15,7 @@ from .model import Sidebar
 from .plan import Plan
 from .transform import FATE_BOOKMARKS, FATE_DEDUPED, FATE_DROPPED, FATE_SIDEBAR, PrepareResult, transform
 from .validate import Validation, validate
+from .zen import ZenPrediction
 
 CLEANED_NAME = "StorableSidebar.cleaned.json"
 BOOKMARKS_NAME = "bookmarks.html"
@@ -74,12 +75,14 @@ def prepare(sidebar_path, plan: Plan, out_dir, force: bool = False, **transform_
     disk_cleaned = (out_dir / CLEANED_NAME).read_bytes()
     disk_html = (out_dir / BOOKMARKS_NAME).read_text(encoding="utf-8") if html_text else ""
     excluded = {sp.space_id for sp in plan.spaces if not sp.import_space}
-    validation = validate(source, disk_cleaned, disk_html, result.ledger, excluded)
+    validation = validate(source, disk_cleaned, disk_html, result.ledger, excluded, target=plan.target)
     validation.warnings[:0] = warnings
 
     manifest = {
         "tool": PROG,
         "tool_version": __version__,
+        "target": plan.target,
+        **({"max_folder_depth": plan.max_folder_depth} if plan.target == "zen" else {}),
         "created_at": iso_now(),
         "source_path": str(sidebar_path),
         "source_sha256": source_sha,
@@ -118,6 +121,20 @@ def _n(count: int, word: str) -> str:
     return f"{count} {word if count == 1 else word + 's'}"
 
 
+def _zen_line(p: ZenPrediction) -> str:
+    lost = [
+        f"{_n(p.open_tabs_lost, 'open tab')} not imported",
+        f"{_n(p.tab_group_tabs_lost, 'tab')} in pinned tab groups dropped" if p.tab_group_tabs_lost else "",
+        f"{_n(p.other_tabs_lost, 'tab')} inside other Arc items dropped" if p.other_tabs_lost else "",
+        (f"{_n(p.unimportable_urls, 'tab')} skipped for the URL (none, or not http, https, file or ftp)"
+         if p.unimportable_urls else ""),
+        (f"{_n(p.flattened_folders, 'folder')} deeper than {p.max_subfolders} levels merged into its parent"
+         if p.flattened_folders else ""),
+    ]
+    return (f"{_n(p.pinned_tabs, 'pinned tab')} ({p.loose_pinned_tabs} loose, {p.tabs_in_folders} in "
+            f"{_n(p.folders, 'folder')}), " + ", ".join(x for x in lost if x))
+
+
 def render_prepare(out_dir: Path, result: PrepareResult, validation: Validation, manifest: dict) -> str:
     lines: List[str] = []
     add = lines.append
@@ -134,7 +151,10 @@ def render_prepare(out_dir: Path, result: PrepareResult, validation: Validation,
         if not sr.actions:
             add("  - no changes")
         b, a = sr.before, sr.after
-        if b and a:
+        if isinstance(b, ZenPrediction) and isinstance(a, ZenPrediction):
+            add(f"  Zen, before: {_zen_line(b)}")
+            add(f"  Zen, after:  {_zen_line(a)}")
+        elif b and a:
             groups = (str(b.pinned_groups) if b.pinned_groups_min == b.pinned_groups
                       else f"{b.pinned_groups_min} to {b.pinned_groups}")
             add(f"  Dia, before: {groups} pinned groups ({b.nested_groups} nested in Arc), "
@@ -155,7 +175,8 @@ def render_prepare(out_dir: Path, result: PrepareResult, validation: Validation,
         f"{counts[FATE_DROPPED]} dropped with a reason")
     no_url = [e for e in result.ledger if not e.url and e.fate == FATE_SIDEBAR]
     if no_url:
-        add(f"  {_n(len(no_url), 'tab')} without a URL stay in the sidebar (reason: no URL; Dia may skip them)")
+        skip = "Zen's importer skips them" if manifest.get("target") == "zen" else "Dia may skip them"
+        add(f"  {_n(len(no_url), 'tab')} without a URL stay in the sidebar (reason: no URL; {skip})")
     dropped = [e for e in result.ledger if e.fate == FATE_DROPPED]
     for e in dropped[:10]:
         add(f"  dropped: {e.url or e.title} ({e.reason})")

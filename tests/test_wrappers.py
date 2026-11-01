@@ -184,7 +184,7 @@ def test_plan_file_option():
     sb, _, _ = nested_sidebar()
     assert plan_from_json(_plan_json(sb)).spaces[0].pinned_wrappers == "unwrap"  # plans from 0.1.2
     assert plan_from_json(_plan_json(sb, pinned_wrappers="keep")).spaces[0].pinned_wrappers == "keep"
-    with pytest.raises(PlanError, match="'flatten' is not one of unwrap, keep"):
+    with pytest.raises(PlanError, match="'flatten' is not one of unwrap, folders, keep"):
         plan_from_json(_plan_json(sb, pinned_wrappers="flatten"))
 
 

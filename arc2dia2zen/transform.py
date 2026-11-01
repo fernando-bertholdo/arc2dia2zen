@@ -6,13 +6,17 @@ Order of operations for each space:
   3. folders set to to-bookmarks are exported and removed
   4. split views and tab groups left in the pinned area are unwrapped: their items take the
      wrapper's place, in order (pinned_wrappers: unwrap). Dia's importer drops the tabs inside
-     them (seen in a real migration test).
+     them (seen in a real migration test). With pinned_wrappers: folders, the tab groups become
+     folders with the same names instead and split views stay; that is the default for Zen,
+     whose importer drops tab groups, keeps folders and flattens split views by itself.
   5. the folder strategy is applied to each remaining top-level folder
   6. open (Today) tabs, including those inside Arc tab groups, are moved to a pinned
      folder or exported (open_tabs)
-  7. non-web links are exported (non_web: to-bookmarks)
-  8. repeated URLs are removed (dedupe_urls)
-  9. folders left without content are removed (drop_empty_folders)
+  7. Zen only: folders deeper than max_folder_depth are merged into their folder at that
+     level, in order, which is what Zen's importer does with them
+  8. non-web links are exported (non_web: to-bookmarks)
+  9. repeated URLs are removed (dedupe_urls)
+ 10. folders left without content are removed (drop_empty_folders)
 
 Every tab of the original file gets one ledger entry that says where it ended up.
 Tab groups count as folders for steps 2 and 3. Tabs without a saved URL are never removed or
@@ -39,6 +43,7 @@ from .bookmarks import BNode, count_links
 from .errors import PlanError
 from .model import (
     FOLDER_KINDS,
+    KIND_FOLDER,
     KIND_SPLIT,
     KIND_TAB,
     KIND_TAB_GROUP,
@@ -56,6 +61,7 @@ from .model import (
     unix_to_apple,
 )
 from .plan import FOLDER_STRATEGIES, Plan, SpacePlan, unchanged_space_plan
+from .zen import ids_in_tab_groups, predict_zen_import, zen_url
 
 NON_WEB_FOLDER = "Non-web links from Arc"
 
@@ -79,7 +85,8 @@ class LedgerEntry:
     reason: str = ""
     new_path: Optional[str] = None
     bookmarks_path: Optional[str] = None
-    dia_note: str = ""
+    dia_note: str = ""  # target dia: what Dia's importer is expected to do with this tab
+    zen_note: str = ""  # target zen: the same for Zen's importer
 
 
 @dataclass
@@ -88,10 +95,12 @@ class SpaceResult:
     title: str
     plan: dict
     actions: List[str] = field(default_factory=list)
-    before: Optional[DiaPrediction] = None
-    after: Optional[DiaPrediction] = None
+    before: Optional[object] = None  # DiaPrediction or ZenPrediction, after the plan's target
+    after: Optional[object] = None
     bookmarks: int = 0
     unwrapped: List[dict] = field(default_factory=list)  # pinned split views and tab groups unwrapped
+    converted: List[dict] = field(default_factory=list)  # pinned tab groups turned into folders
+    flattened: List[str] = field(default_factory=list)  # paths of folders merged for the depth limit
 
 
 @dataclass
@@ -132,6 +141,7 @@ class Transformer:
         self.src = source
         self.sb = source.clone()
         self.plan = plan
+        self.target = plan.target
         self.sep = plan.path_separator
         self.new_id = id_factory
         self.now_apple = unix_to_apple(time.time() if now is None else now)
@@ -173,6 +183,9 @@ class Transformer:
         entry.bookmarks_path = bookmarks_path
 
     def _finalize_ledger(self) -> None:
+        if self.target == "zen":
+            self._finalize_ledger_zen()
+            return
         where = self.sb.locate_all()
         wrapped = set()
         for space in self.sb.spaces:
@@ -202,6 +215,33 @@ class Transformer:
                 entry.reason = "no URL"
                 notes.append("tab has no saved URL; Dia may skip it")
             entry.dia_note = "; ".join(notes)
+
+    def _finalize_ledger_zen(self) -> None:
+        where = self.sb.locate_all()
+        grouped = set()
+        for space in self.sb.spaces:
+            grouped |= ids_in_tab_groups(self.sb, space.pinned_id)
+        for entry in self.ledger.values():
+            if entry.fate != FATE_SIDEBAR:
+                continue
+            loc = where.get(entry.item_id)
+            if loc is None:
+                entry.new_path = None
+                continue
+            entry.new_path = f"{loc.area}: {join_path(loc.path)}" if loc.area != "orphan" else "orphan"
+            notes = []
+            if entry.url and not zen_url(entry.url):
+                notes.append("URL scheme Zen's importer skips (it keeps http, https, file and ftp)")
+            if loc.area == "open":
+                notes.append("still an open tab: Zen's importer does not import open tabs")
+            if loc.area == "pinned" and entry.item_id in grouped:
+                notes.append("inside a pinned tab group: Zen's importer drops it")
+            if loc.area == "orphan":
+                notes.append("not under any space; Zen is not expected to import it")
+            if not entry.url:
+                entry.reason = "no URL"
+                notes.append("tab has no saved URL; Zen's importer skips it")
+            entry.zen_note = "; ".join(notes)
 
     # ------------------------------------------------------------------ bookmarks tree
 
@@ -319,8 +359,13 @@ class Transformer:
         self.sb.serialize()
         return PrepareResult(self.sb, self.bm_roots, list(self.ledger.values()), results, self.warnings)
 
+    def _predict(self, space: Space):
+        if self.target == "zen":
+            return predict_zen_import(self.sb, space, self.plan.max_folder_depth)
+        return predict_import(self.sb, space)
+
     def _apply_space(self, space: Space, sp: SpacePlan) -> SpaceResult:
-        res = SpaceResult(space.id, space.title, sp.to_json(), before=predict_import(self.sb, space))
+        res = SpaceResult(space.id, space.title, sp.to_json(), before=self._predict(space))
         if not sp.import_space:
             self._exclude_space(space, res.actions)
             res.after = None
@@ -332,15 +377,19 @@ class Transformer:
         self._export_bookmark_folders(space, sp, overrides, res.actions)
         if sp.pinned_wrappers == "unwrap":
             res.unwrapped = self._unwrap_pinned(space, res.actions)
+        elif sp.pinned_wrappers == "folders":
+            res.converted = self._tab_groups_to_folders(space, res.actions)
         self._apply_folder_strategies(space, sp, overrides, res.actions)
         self._handle_open_tabs(space, sp, res.actions)
+        if self.target == "zen" and self.plan.max_folder_depth:
+            res.flattened = self._flatten_deep(space, self.plan.max_folder_depth, res.actions)
         if sp.non_web == "to-bookmarks":
             self._export_non_web(space, res.actions)
         if sp.dedupe_urls:
             self._dedupe_urls(space, res.actions)
         if sp.drop_empty_folders:
             self._drop_empty(space, res.actions)
-        res.after = predict_import(self.sb, space)
+        res.after = self._predict(space)
         node = self._bm_space_nodes.get(space.id)
         res.bookmarks = count_links([node]) if node else 0
         return res
@@ -496,6 +545,90 @@ class Transformer:
             + ", in order (" + "; ".join(details[:5]) + ("; ..." if len(details) > 5 else "") + ")"
         )
         return done
+
+    def _tab_groups_to_folders(self, space: Space, actions: List[str]) -> List[dict]:
+        """Turn every Arc tab group in the pinned area into a folder with the same name, in place.
+        Zen's importer drops tab groups with their tabs but keeps folders. Split views stay as
+        they are: Zen replaces them with their tabs on its own."""
+        pinned = space.pinned_id
+        if pinned is None or pinned not in self.sb.items:
+            return []
+        done: List[dict] = []
+        for e in list(self.sb.walk(pinned)):
+            if e.kind != KIND_TAB_GROUP:
+                continue
+            obj = self.sb.items[e.id]
+            title = folder_title(obj)
+            obj["title"] = title
+            obj["data"] = {KIND_FOLDER: {}}
+            done.append({
+                "title": title,
+                "path": join_path(e.path) if e.path else "",
+                "tabs": sum(1 for c in self.sb.children(e.id) if self.sb.kind(c) == KIND_TAB),
+            })
+        if done:
+            details = [f'"{d["title"]}" ' + (f"in {d['path']}" if d["path"] else "at the top level")
+                       + f", {_n(d['tabs'], 'tab')}" for d in done]
+            actions.append(
+                f"turned {_n(len(done), 'tab group')} in the pinned area into "
+                + ("a folder with the same name" if len(done) == 1 else "folders with the same names")
+                + ", because Zen's importer drops tab groups and keeps folders ("
+                + "; ".join(details[:5]) + ("; ..." if len(details) > 5 else "") + ")"
+            )
+        return done
+
+    def _flatten_deep(self, space: Space, max_depth: int, actions: List[str]) -> List[str]:
+        """Merge the pinned folders deeper than ``max_depth`` into their folder at that level:
+        their items take their place, in order. This is what Zen's importer does with folders
+        deeper than zen.folders.max-subfolders; doing it here makes the result visible in the
+        report and the same on any Zen version."""
+        pinned = space.pinned_id
+        if pinned is None or pinned not in self.sb.items:
+            return []
+        merged: List[str] = []
+        seen = {pinned}
+
+        def collect(fid: str, path: Tuple[str, ...]) -> List[str]:
+            out: List[str] = []
+            for c in self.sb.children(fid):
+                if c in seen or c not in self.sb.items:
+                    continue
+                seen.add(c)
+                if self.sb.kind(c) == KIND_FOLDER:
+                    p = path + (folder_title(self.sb.items[c]),)
+                    merged.append(join_path(p))
+                    out.extend(collect(c, p))
+                    self.sb.items.pop(c, None)
+                else:
+                    out.append(c)
+            return out
+
+        def visit(fid: str, level: int, path: Tuple[str, ...]) -> None:
+            p = path + (folder_title(self.sb.items[fid]),)
+            if level >= max_depth:
+                if not any(self.sb.kind(c) == KIND_FOLDER for c in self.sb.children(fid)):
+                    return
+                content = collect(fid, p)
+                self.sb.items[fid]["childrenIds"] = content
+                for c in content:
+                    self.sb.items[c]["parentID"] = fid
+                return
+            for c in self.sb.children(fid):
+                if c not in seen and self.sb.kind(c) == KIND_FOLDER:
+                    seen.add(c)
+                    visit(c, level + 1, p)
+
+        for c in list(self.sb.children(pinned)):
+            if c not in seen and self.sb.kind(c) == KIND_FOLDER:
+                seen.add(c)
+                visit(c, 1, ())
+        if merged:
+            actions.append(
+                f"merged {_n(len(merged), 'folder')} deeper than {max_depth} levels into their folder at level "
+                f"{max_depth}, tabs in order, as Zen's importer would (zen.folders.max-subfolders is {max_depth} "
+                "unless you raised it): " + "; ".join(merged[:5]) + (" ..." if len(merged) > 5 else "")
+            )
+        return merged
 
     def _apply_folder_strategies(self, space: Space, sp: SpacePlan, overrides: Dict[str, str], actions: List[str]) -> None:
         pinned = space.pinned_id
@@ -695,7 +828,7 @@ class Transformer:
             self.sb.items[fid]["childrenIds"] = build(entries, fid)
             self.sb.attach(fid, pinned)
             kept_splits = sum(1 for i in self.sb.subtree_ids(fid) if self.sb.kind(i) == KIND_SPLIT)
-            if kept_splits:
+            if kept_splits and self.target == "dia":
                 self.warnings.append(
                     f'space "{space.title}": {_n(kept_splits, "split view")} kept in "{name}" '
                     "(open_tabs_split_views: keep); Dia's importer drops the tabs inside pinned split views "
@@ -782,7 +915,7 @@ def transform(source: Sidebar, plan: Plan, **kwargs) -> PrepareResult:
 def what_if(source: Sidebar, plan: Plan, space_id: str) -> Dict[str, dict]:
     """Run the plan for one space with each folder strategy and report the outcome."""
     base = plan.for_space(space_id)
-    if base is None:
+    if base is None or plan.target != "dia":
         return {}
     out: Dict[str, dict] = {}
     for strategy in FOLDER_STRATEGIES:

@@ -12,6 +12,7 @@ from . import urls as U
 from .errors import FormatError
 from .model import KIND_CONTAINER, KIND_TAB, Sidebar, read_pairs, tab_url
 from .transform import FATE_BOOKMARKS, FATE_DEDUPED, FATE_DROPPED, FATE_SIDEBAR, LedgerEntry
+from .zen import ids_in_tab_groups
 
 
 @dataclass
@@ -92,7 +93,7 @@ def _without_items_and_spaces(sb: Sidebar) -> dict:
 
 
 def validate(source: Sidebar, output_bytes: bytes, html_text: str, ledger: List[LedgerEntry],
-             excluded_space_ids: Set[str]) -> Validation:
+             excluded_space_ids: Set[str], target: str = "dia") -> Validation:
     v = Validation()
 
     # 1. The output parses and keeps the alternating shape.
@@ -192,11 +193,18 @@ def validate(source: Sidebar, output_bytes: bytes, html_text: str, ledger: List[
         elif tab_url(source.items[item_id]) != tab_url(out.items[item_id]):
             v.errors.append(f"tab {item_id} changed URL")
 
-    # 7. Tabs Dia's importer is known to drop: those inside pinned split views and tab groups.
+    # 7. Tabs the importer is known to drop. Dia: those inside pinned split views and tab groups.
+    #    Zen: those inside pinned tab groups (it flattens split views itself).
     wrapped = 0
     for space in out.spaces:
-        wrapped += sum(1 for i in out.wrapped_ids(space.pinned_id) if out.kind(i) == KIND_TAB)
-    if wrapped:
+        inside = ids_in_tab_groups(out, space.pinned_id) if target == "zen" else out.wrapped_ids(space.pinned_id)
+        wrapped += sum(1 for i in inside if out.kind(i) == KIND_TAB)
+    if wrapped and target == "zen":
+        v.warnings.append(
+            ("1 tab still sits" if wrapped == 1 else f"{wrapped} tabs still sit")
+            + " inside tab groups in the pinned area; Zen's importer drops these (use pinned_wrappers: folders)"
+        )
+    elif wrapped:
         v.warnings.append(
             ("1 tab still sits" if wrapped == 1 else f"{wrapped} tabs still sit")
             + " inside split views or tab groups in the pinned area; Dia's importer drops these "
