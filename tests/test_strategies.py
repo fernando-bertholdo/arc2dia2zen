@@ -4,12 +4,12 @@ import json
 import pytest
 
 import fixturegen
-from arc2dia import bookmarks as B
-from arc2dia.errors import PlanError
-from arc2dia.model import KIND_FOLDER, Sidebar, tab_url
-from arc2dia.plan import FolderOverride
-from arc2dia.transform import FATE_BOOKMARKS, FATE_DEDUPED, FATE_DROPPED, FATE_SIDEBAR, transform, what_if
-from arc2dia.validate import structure_problems
+from arc2dia2zen import bookmarks as B
+from arc2dia2zen.errors import PlanError
+from arc2dia2zen.model import KIND_FOLDER, Sidebar, tab_url
+from arc2dia2zen.plan import FolderOverride
+from arc2dia2zen.transform import FATE_BOOKMARKS, FATE_DEDUPED, FATE_DROPPED, FATE_SIDEBAR, transform, what_if
+from arc2dia2zen.validate import structure_problems
 from conftest import find_folder, folder_children_urls, make_plan, pinned_children, space_by_title
 
 PLAIN = dict(dedupe_trees=False, drop_empty_folders=False, open_tabs="leave", pinned_wrappers="keep")

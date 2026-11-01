@@ -62,7 +62,7 @@ class KillArc(Oracle):
 class DeleteBackup(Oracle):
     def restore(self):
         super().restore()
-        self.mac("rm -rf ~/arc2dia-backups")
+        self.mac("rm -rf ~/arc2dia2zen-backups")
 
 
 class OsascriptTab(Oracle):

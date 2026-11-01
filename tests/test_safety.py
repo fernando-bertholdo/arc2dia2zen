@@ -6,7 +6,7 @@ from pathlib import Path
 
 import fixturegen
 
-PKG = Path(__file__).resolve().parent.parent / "arc2dia"
+PKG = Path(__file__).resolve().parent.parent / "arc2dia2zen"
 SOURCES = sorted(PKG.glob("*.py"))
 
 NETWORK_MODULES = {"socket", "ssl", "http", "urllib.request", "urllib3", "requests", "ftplib", "smtplib",

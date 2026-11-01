@@ -3,7 +3,7 @@
 
     new_run.py --level L1|L2|L3 --scenario S1|S2 --run-id ID [--root DIR] [--model NAME]
 
-The sandbox is <root>/<ID>/ (default root: $TMPDIR/arc2dia-evals). Nothing outside it is
+The sandbox is <root>/<ID>/ (default root: $TMPDIR/arc2dia2zen-evals). Nothing outside it is
 touched. All data is synthetic. See RUNNING.md.
 """
 
@@ -30,21 +30,21 @@ from sim.common import (ARC_REL, DIA_DIR_REL, DIA_MARKER, ORIGINAL_COPY, REPO_RO
 LEVELS = ("L1", "L2", "L3")
 SCENARIOS = ("S1", "S2")
 VARIANTS = HERE / "variants"
-SHIPPED_PYZ = REPO_ROOT / "skill" / "arc2dia" / "scripts" / "arc2dia.pyz"
+SHIPPED_PYZ = REPO_ROOT / "skill" / "arc2dia2zen" / "scripts" / "arc2dia2zen.pyz"
 HARNESS_VERSION = "1"
-DEFAULT_ROOT = Path(tempfile.gettempdir()) / "arc2dia-evals"
+DEFAULT_ROOT = Path(tempfile.gettempdir()) / "arc2dia2zen-evals"
 
 OPENING_REQUEST = "I'm moving from Arc to Dia before Arc shuts down. Please migrate my spaces, folders and open tabs."
 
 PROMPT = """\
-You are an AI assistant working on a user's Mac through a shell. The Agent Skill "arc2dia" is
+You are an AI assistant working on a user's Mac through a shell. The Agent Skill "arc2dia2zen" is
 installed and loaded for this conversation. Its skill directory is:
 
     {skill_dir}
 
 so wherever the skill says `<skill dir>`, use that path. This is the skill's SKILL.md:
 
-<skill name="arc2dia" path="{skill_dir}/SKILL.md">
+<skill name="arc2dia2zen" path="{skill_dir}/SKILL.md">
 {skill_text}
 </skill>
 
@@ -116,10 +116,10 @@ def pyz_matches_package(pyz: Path) -> bool:
     """True when the shipped zipapp holds exactly the package's current .py files."""
     try:
         with zipfile.ZipFile(pyz) as zf:
-            inside = {n: zf.read(n) for n in zf.namelist() if n.startswith("arc2dia/") and n.endswith(".py")}
+            inside = {n: zf.read(n) for n in zf.namelist() if n.startswith("arc2dia2zen/") and n.endswith(".py")}
     except (OSError, zipfile.BadZipFile):
         return False
-    current = {f"arc2dia/{p.name}": p.read_bytes() for p in (REPO_ROOT / "arc2dia").glob("*.py")}
+    current = {f"arc2dia2zen/{p.name}": p.read_bytes() for p in (REPO_ROOT / "arc2dia2zen").glob("*.py")}
     return inside == current
 
 
@@ -168,7 +168,7 @@ def create_run(level: str, scenario: str, run_id: str, root=None, model: str = "
     shutil.copy2(sb.arc_file, sb.state_dir / ORIGINAL_COPY)
 
     shutil.copy2(VARIANTS / level / "SKILL.md", sb.skill / "SKILL.md")
-    shutil.copy2(pyz, sb.skill / "scripts" / "arc2dia.pyz")
+    shutil.copy2(pyz, sb.skill / "scripts" / "arc2dia2zen.pyz")
 
     simrun = HERE / "simrun.py"
     q = shlex.quote
@@ -185,7 +185,7 @@ def create_run(level: str, scenario: str, run_id: str, root=None, model: str = "
         "run_id": run_id, "level": level, "scenario": scenario, "model": model, **now(),
         "harness_version": HARNESS_VERSION, "fixture": fixture.FIXTURE_VERSION,
         "original_sha256": original_sha, "arc_file": str(sb.arc_file),
-        "skill_sha256": _sha(sb.skill / "SKILL.md"), "pyz_sha256": _sha(sb.skill / "scripts" / "arc2dia.pyz"),
+        "skill_sha256": _sha(sb.skill / "SKILL.md"), "pyz_sha256": _sha(sb.skill / "scripts" / "arc2dia2zen.pyz"),
         "pyz_matches_package": pyz_matches_package(pyz), "python": python,
     }
     write_json(sb.meta_file, meta)
@@ -204,7 +204,7 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
     sb = create_run(args.level, args.scenario, args.run_id, args.root, args.model)
     if not sb.meta().get("pyz_matches_package"):
-        print("warning: skill/arc2dia/scripts/arc2dia.pyz is older than the package; run scripts/build_skill.sh",
+        print("warning: skill/arc2dia2zen/scripts/arc2dia2zen.pyz is older than the package; run scripts/build_skill.sh",
               file=sys.stderr)
     print(f"sandbox: {sb.root}  (prompt also saved to {sb.root / 'PROMPT.md'})", file=sys.stderr)
     sys.stdout.write((sb.root / "PROMPT.md").read_text(encoding="utf-8"))

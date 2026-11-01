@@ -1,15 +1,15 @@
 ---
-name: arc2dia
-description: Move a Mac user's Arc browser sidebar to Dia with the bundled arc2dia tool, keeping the open (Today) tabs and nested folders that Dia's own Arc importer drops or flattens, and putting Arc's original data back afterwards. Use when someone wants to switch or migrate from Arc to Dia, bring Arc spaces, folders or open tabs into Dia, or asks what to do before Arc shuts down on December 22, 2026.
+name: arc2dia2zen
+description: Move a Mac user's Arc browser sidebar to Dia with the bundled arc2dia2zen tool, keeping the open (Today) tabs and nested folders that Dia's own Arc importer drops or flattens, and putting Arc's original data back afterwards. Use when someone wants to switch or migrate from Arc to Dia, bring Arc spaces, folders or open tabs into Dia, or asks what to do before Arc shuts down on December 22, 2026.
 ---
 
-# arc2dia: move Arc to Dia without losing open tabs or folders
+# arc2dia2zen: move Arc to Dia without losing open tabs or folders
 
 Arc shuts down on December 22, 2026. Dia's official importer (Dia > Import from Another
 Browser… > Arc) reads `~/Library/Application Support/Arc/StorableSidebar.json` and turns each Arc
 space into a new Dia profile. Every import creates new profiles and never merges into existing
 ones; it drops open (unpinned, "Today") tabs and flattens nested folders into separate groups.
-arc2dia works around this without touching Dia: it writes a cleaned copy of the sidebar file,
+arc2dia2zen works around this without touching Dia: it writes a cleaned copy of the sidebar file,
 puts it in Arc's place while Arc is quit so the importer reads it, then restores the original
 byte for byte.
 
@@ -18,13 +18,13 @@ happens in the apps (quitting Arc, running Dia's importer).
 
 ## Running the tool
 
-    cd ~ && python3 "<skill dir>/scripts/arc2dia.pyz" <command> [options]
+    cd ~ && python3 "<skill dir>/scripts/arc2dia2zen.pyz" <command> [options]
 
 `<skill dir>` is the folder that holds this SKILL.md. Below, `A2D` is shorthand for
-`python3 "<skill dir>/scripts/arc2dia.pyz"`, not a command: always type the full form. When the
-tool's output says `arc2dia …`, run it the same way. Always start from the home folder
-(`cd ~ &&`): the plan (`~/arc2dia-plan.json`), the prepared files (`~/arc2dia-out/`) and the
-backups (`~/arc2dia-backups/`) live there. The tool needs macOS and Python 3.9+ (the `python3` of
+`python3 "<skill dir>/scripts/arc2dia2zen.pyz"`, not a command: always type the full form. When the
+tool's output says `arc2dia2zen …`, run it the same way. Always start from the home folder
+(`cd ~ &&`): the plan (`~/arc2dia2zen-plan.json`), the prepared files (`~/arc2dia2zen-out/`) and the
+backups (`~/arc2dia2zen-backups/`) live there. The tool needs macOS and Python 3.9+ (the `python3` of
 the Command Line Tools) and never uses the network. Its files hold the user's browsing data: do
 not paste them in full or share them. To check whether Arc runs, use `A2D status` or
 `pgrep -x Arc`, never `tell application "Arc"`, which starts it.
@@ -63,7 +63,7 @@ Do the steps in order. Each checkpoint must hold before you go on.
    importer would do as is (nested folders flattened, open tabs lost).
    Checkpoint: scan read the sidebar file. If it is missing, ask whether Arc is used on this Mac.
 
-2. **Plan.** Run `A2D plan`. It writes `arc2dia-plan.json` and prints, per space, what Dia would
+2. **Plan.** Run `A2D plan`. It writes `arc2dia2zen-plan.json` and prints, per space, what Dia would
    get with each folder strategy (`*` marks the chosen one):
    - `keep`: Dia's default; every folder becomes its own flat group.
    - `path-names`: one group per folder, named after its path ("A › B › C"); the default for
@@ -79,10 +79,10 @@ Do the steps in order. Each checkpoint must hold before you go on.
    `--exclude-space "Name"`.
    Checkpoint: the user approved the plan.
 
-3. **Prepare.** Run `A2D prepare --plan arc2dia-plan.json` (add `--force` when you redo it).
+3. **Prepare.** Run `A2D prepare --plan arc2dia2zen-plan.json` (add `--force` when you redo it).
    Summarize each space's "Dia, after" line and what went to `bookmarks.html`.
    Checkpoint: the output ends with `Validation: OK` and the exit code is 0. Otherwise do not
-   swap: read `arc2dia-out/report.txt`, adjust the plan and prepare again. Its "Next:" hint does
+   swap: read `arc2dia2zen-out/report.txt`, adjust the plan and prepare again. Its "Next:" hint does
    not replace the next checkpoints.
 
 4. **Quit Arc.** Ask the user to quit Arc completely (Arc > Quit Arc or Cmd+Q; closing the window
@@ -93,7 +93,7 @@ Do the steps in order. Each checkpoint must hold before you go on.
    ask again; never kill it.
 
 5. **Swap.** Run `A2D swap` (dry run; read it), then `A2D swap --apply`. The original moves to
-   `~/arc2dia-backups/<timestamp>/` and the cleaned copy takes its place. Run the reset commands it
+   `~/arc2dia2zen-backups/<timestamp>/` and the cleaned copy takes its place. Run the reset commands it
    prints only if the user said yes to a fresh Dia (and has quit Dia).
    Checkpoint: the output says `Done. The original is safe in …` and status shows `ACTIVE SWAP`.
    If swap refuses, see "When something goes wrong".
@@ -113,16 +113,16 @@ Do the steps in order. Each checkpoint must hold before you go on.
    `no active swap`. If restore refuses because Arc is running, ask the user to quit Arc first.
 
 8. **Verify.** Dia must be running with a window open; if macOS asks whether the terminal may
-   control Dia, the user clicks OK. Run `A2D verify --prepared arc2dia-out` and explain the result:
+   control Dia, the user clicks OK. Run `A2D verify --prepared arc2dia2zen-out` and explain the result:
    which profile matched which space (numbered copies such as "Personal 2" are paired
    automatically; pair others with `--map "Space=Profile"`), the expected losses, and any
    `MISSING` lines. Never open tabs to fix anything.
 
 9. **Report.** Tell the user, per space, what is now in Dia; that the original Arc file was
    restored and its hash checked; where the backup is
-   (`~/arc2dia-backups/<timestamp>/StorableSidebar.original.json`); where `bookmarks.html` is, if
+   (`~/arc2dia2zen-backups/<timestamp>/StorableSidebar.original.json`); where `bookmarks.html` is, if
    one was written, and that browsers can import it; the verify result; that Arc can be opened
-   again; and that `~/arc2dia-out` holds private browsing data.
+   again; and that `~/arc2dia2zen-out` holds private browsing data.
 
 ## When something goes wrong
 
@@ -131,7 +131,7 @@ Do the steps in order. Each checkpoint must hold before you go on.
 - **swap says Arc is running:** ask the user to quit Arc completely, check `A2D status`, then
   swap again. Never kill Arc.
 - **swap says the file changed since prepare:** Arc was probably opened. Run `A2D plan --force`
-  (with the same options) and `A2D prepare --plan arc2dia-plan.json --force`, tell the user if the
+  (with the same options) and `A2D prepare --plan arc2dia2zen-plan.json --force`, tell the user if the
   numbers changed, and continue from step 4.
 - **The user wants to open Arc mid-flow:** restore first (step 7); then Arc may be opened.
 - **A command is blocked by a permission check:** follow safety rule 8; do not continue the

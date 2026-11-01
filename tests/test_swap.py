@@ -3,11 +3,11 @@ import subprocess
 
 import pytest
 
-from arc2dia import swap as S
-from arc2dia.errors import SafetyError
-from arc2dia.fsutil import sha256_file
-from arc2dia.model import Sidebar
-from arc2dia.prepare import CLEANED_NAME, MANIFEST_NAME, prepare
+from arc2dia2zen import swap as S
+from arc2dia2zen.errors import SafetyError
+from arc2dia2zen.fsutil import sha256_file
+from arc2dia2zen.model import Sidebar
+from arc2dia2zen.prepare import CLEANED_NAME, MANIFEST_NAME, prepare
 from conftest import FakeChecker, make_plan
 
 
@@ -198,7 +198,7 @@ def test_status_warns_when_the_file_changed_during_the_swap(env):
     warnings = [line for line in lines if line.startswith("WARNING:")]
     assert warnings == [
         "WARNING: the sidebar file no longer matches the installed cleaned copy. Arc or another program wrote "
-        "the file; quit Arc, then restore (`arc2dia restore --apply`)."
+        "the file; quit Arc, then restore (`arc2dia2zen restore --apply`)."
     ]
     assert not any("still the installed cleaned copy" in line for line in lines)
 
@@ -237,7 +237,7 @@ def test_swap_output_says_how_to_keep_arc_quit(env):
     assert "closing Arc's window does not quit Arc" in applied
     assert "other apps or automation can launch Arc in the background" in applied
     assert "Turning off Arc's sync before the swap is the safest choice; do not open Arc now" in applied
-    assert "Run `arc2dia status` right before and right after the import" in applied
+    assert "Run `arc2dia2zen status` right before and right after the import" in applied
 
 
 def test_pgrep_checker(monkeypatch):

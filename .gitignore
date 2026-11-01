@@ -7,6 +7,10 @@ dist/
 .venv/
 
 # Output of the tool. These hold real browsing data; never commit them.
+arc2dia2zen-out/
+arc2dia2zen-plan.json
+arc2dia2zen-backups/
+# the same files under the name before 0.2.0
 arc2dia-out/
 arc2dia-plan.json
 arc2dia-backups/

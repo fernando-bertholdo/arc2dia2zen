@@ -1,7 +1,7 @@
 """Loaded through PYTHONPATH by the simulated Mac only (never on a real one).
 
-arc2dia's Dia reader refuses to run unless ``sys.platform == "darwin"``. This hook gives the
-``arc2dia.dia`` module, and nothing else, a ``sys`` whose ``platform`` is "darwin", so ``verify``
+arc2dia2zen's Dia reader refuses to run unless ``sys.platform == "darwin"``. This hook gives the
+``arc2dia2zen.dia`` module, and nothing else, a ``sys`` whose ``platform`` is "darwin", so ``verify``
 calls ``osascript`` and reaches the sandbox's osascript shim. The rest of Python is untouched.
 """
 
@@ -40,7 +40,7 @@ class _Loader(importlib.abc.Loader):
 
 class _Finder(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path, target=None):
-        if fullname != "arc2dia.dia":
+        if fullname != "arc2dia2zen.dia":
             return None
         for finder in sys.meta_path:
             if finder is self or not hasattr(finder, "find_spec"):

@@ -1,5 +1,5 @@
-from arc2dia import bookmarks as B
-from arc2dia.transform import transform
+from arc2dia2zen import bookmarks as B
+from arc2dia2zen.transform import transform
 from conftest import make_plan
 
 

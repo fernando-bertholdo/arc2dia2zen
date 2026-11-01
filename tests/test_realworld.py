@@ -5,13 +5,13 @@ exported to bookmarks.html. The data is synthetic (see fixturegen.research_space
 import json
 
 import fixturegen
-from arc2dia import bookmarks as B
-from arc2dia.analysis import find_duplicate_trees, scan
-from arc2dia.cli import main
-from arc2dia.model import Sidebar, folder_title, tab_url
-from arc2dia.plan import FolderOverride
-from arc2dia.transform import FATE_DEDUPED, FATE_DROPPED, FATE_SIDEBAR, transform
-from arc2dia.validate import structure_problems, validate
+from arc2dia2zen import bookmarks as B
+from arc2dia2zen.analysis import find_duplicate_trees, scan
+from arc2dia2zen.cli import main
+from arc2dia2zen.model import Sidebar, folder_title, tab_url
+from arc2dia2zen.plan import FolderOverride
+from arc2dia2zen.transform import FATE_DEDUPED, FATE_DROPPED, FATE_SIDEBAR, transform
+from arc2dia2zen.validate import structure_problems, validate
 from conftest import find_folder, make_plan, pinned_children, space_by_title
 
 REAL_RUN = ["--override", "Imported From Edge=to-bookmarks", "--open-tabs", "pinned-folder",

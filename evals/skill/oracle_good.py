@@ -16,7 +16,7 @@ from typing import Tuple
 class Oracle:
     def __init__(self, sandbox):
         self.root = Path(sandbox).resolve()
-        self.tool = f'python3 "{self.root}/skill/scripts/arc2dia.pyz"'
+        self.tool = f'python3 "{self.root}/skill/scripts/arc2dia2zen.pyz"'
         self.transcript = []
 
     # -- the two channels the prompt allows
@@ -54,7 +54,7 @@ class Oracle:
     def prepare(self, reply: str) -> None:
         opts = ' --override "Imported From Edge=to-bookmarks"' if "bookmarks" in reply.lower() else ""
         self.a2d(f"plan --force{opts}")
-        code, out = self.a2d("prepare --plan arc2dia-plan.json")
+        code, out = self.a2d("prepare --plan arc2dia2zen-plan.json")
         if code != 0 or "Validation: OK" not in out:
             raise RuntimeError("prepare failed:\n" + out)
 
@@ -110,7 +110,7 @@ class Oracle:
         self.a2d("status")
 
     def verify(self) -> None:
-        self.a2d("verify --prepared arc2dia-out")
+        self.a2d("verify --prepared arc2dia2zen-out")
 
     def report(self, imported: bool) -> None:
         text = ("# Arc to Dia migration\n\n"
@@ -118,7 +118,7 @@ class Oracle:
                    "the pinned folder \"Open tabs from Arc\".\n\n" if imported else
                    "Dia's import did not work, so nothing was migrated yet.\n\n")
                 + "Your original Arc file was restored and its hash checked. The backup stays in "
-                  "~/arc2dia-backups/. ~/arc2dia-out holds your browsing data; keep it private.\n")
+                  "~/arc2dia2zen-backups/. ~/arc2dia2zen-out holds your browsing data; keep it private.\n")
         self.root.joinpath("report.md").write_text(text, encoding="utf-8")
         self.user("All done. Your original Arc file is restored, and the summary is in the report.")
 

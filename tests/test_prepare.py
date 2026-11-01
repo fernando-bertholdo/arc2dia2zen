@@ -5,13 +5,13 @@ import json
 import pytest
 
 import fixturegen
-from arc2dia import bookmarks as B
-from arc2dia.errors import Arc2DiaError
-from arc2dia.model import Sidebar, tab_url
-from arc2dia.plan import FOLDER_STRATEGIES
-from arc2dia.prepare import BOOKMARKS_NAME, CLEANED_NAME, MANIFEST_NAME, prepare
-from arc2dia.transform import transform
-from arc2dia.validate import shape_problems, structure_problems, validate
+from arc2dia2zen import bookmarks as B
+from arc2dia2zen.errors import Arc2DiaError
+from arc2dia2zen.model import Sidebar, tab_url
+from arc2dia2zen.plan import FOLDER_STRATEGIES
+from arc2dia2zen.prepare import BOOKMARKS_NAME, CLEANED_NAME, MANIFEST_NAME, prepare
+from arc2dia2zen.transform import transform
+from arc2dia2zen.validate import shape_problems, structure_problems, validate
 from conftest import make_plan
 
 

@@ -9,9 +9,9 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from arc2dia.model import KIND_FOLDER, Sidebar, folder_title, tab_url  # noqa: E402
-from arc2dia.plan import Plan, SpacePlan  # noqa: E402
-from arc2dia.swap import ProcessChecker  # noqa: E402
+from arc2dia2zen.model import KIND_FOLDER, Sidebar, folder_title, tab_url  # noqa: E402
+from arc2dia2zen.plan import Plan, SpacePlan  # noqa: E402
+from arc2dia2zen.swap import ProcessChecker  # noqa: E402
 import fixturegen  # noqa: E402
 
 

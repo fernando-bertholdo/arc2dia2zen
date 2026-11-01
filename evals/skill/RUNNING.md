@@ -1,6 +1,6 @@
-# Running the arc2dia skill eval
+# Running the arc2dia2zen skill eval
 
-This harness measures how well a model follows the arc2dia Agent Skill at three levels of
+This harness measures how well a model follows the arc2dia2zen Agent Skill at three levels of
 guidance (L1 minimal, L2 standard, L3 detailed) on a simulated Mac. Nothing touches a real Mac
 or real browser data: every run gets its own sandbox with a synthetic Arc sidebar
 (`example.*` URLs), shims for the macOS commands, and a scripted user.
@@ -13,14 +13,14 @@ One run = one model, one level, one scenario, one fresh agent conversation.
 - Run the agents on a disposable machine or container. The agent under test runs real shell
   commands through the `mac` wrapper; the sandbox keeps HOME, PATH and the working folder inside
   the run folder, but it is not a security boundary.
-- Make sure the agent has no other copy of the arc2dia skill installed (for Claude Code, check
+- Make sure the agent has no other copy of the arc2dia2zen skill installed (for Claude Code, check
   `~/.claude/skills/` and the project's `.claude/`): the prompt carries the skill text itself.
 - The sandbox root path must not contain spaces or quotes.
 
 Rebuild the tool archive and check the harness:
 
 ```sh
-scripts/build_skill.sh                    # skill/arc2dia/scripts/arc2dia.pyz from arc2dia/
+scripts/build_skill.sh                    # skill/arc2dia2zen/scripts/arc2dia2zen.pyz from arc2dia2zen/
 python3 -m pytest evals/skill/tests       # oracles, shims, simulated user, grader, summary
 ```
 
@@ -28,12 +28,12 @@ python3 -m pytest evals/skill/tests       # oracles, shims, simulated user, grad
 
 ```sh
 python3 evals/skill/new_run.py --level L2 --scenario S1 --run-id sonnet-L2-S1-01 \
-    --model sonnet --root ~/arc2dia-evals > prompt.txt
+    --model sonnet --root ~/arc2dia2zen-evals > prompt.txt
 ```
 
-It creates `~/arc2dia-evals/sonnet-L2-S1-01/` and prints the prompt (also saved as `PROMPT.md`
+It creates `~/arc2dia2zen-evals/sonnet-L2-S1-01/` and prints the prompt (also saved as `PROMPT.md`
 in the run folder). `--model` is only a label for the summary. Without `--root`, runs go to
-`$TMPDIR/arc2dia-evals`. A run id can be used once.
+`$TMPDIR/arc2dia2zen-evals`. A run id can be used once.
 
 ## 2. Give the prompt to the agent
 
@@ -47,7 +47,7 @@ With Claude Code in non-interactive mode it looks roughly like this (check `clau
 the exact flags of your version):
 
 ```sh
-RUN=~/arc2dia-evals/sonnet-L2-S1-01
+RUN=~/arc2dia2zen-evals/sonnet-L2-S1-01
 cd "$RUN" && claude -p "$(cat PROMPT.md)" --model sonnet \
     --allowedTools "Bash($RUN/mac:*)" "Bash($RUN/user:*)" "Write" \
     --max-turns 80 --output-format json > transcript.json
@@ -72,7 +72,7 @@ answered with the fallback reply and every action it took, so misreads can be sp
 ## 3. Grade it
 
 ```sh
-python3 evals/skill/grade.py ~/arc2dia-evals/sonnet-L2-S1-01
+python3 evals/skill/grade.py ~/arc2dia2zen-evals/sonnet-L2-S1-01
 ```
 
 It prints JSON and saves `grade.json` in the run folder.
@@ -80,7 +80,7 @@ It prints JSON and saves `grade.json` in the run folder.
 ## 4. Summarize many runs
 
 ```sh
-python3 evals/skill/summarize.py ~/arc2dia-evals -o results.md
+python3 evals/skill/summarize.py ~/arc2dia2zen-evals -o results.md
 ```
 
 It grades runs that have no `grade.json` yet (`--regrade` grades all again) and writes Markdown
@@ -93,11 +93,11 @@ A batch, for example 5 repetitions of every cell:
 for model in haiku sonnet opus; do for level in L1 L2 L3; do for scenario in S1 S2; do
   for i in 01 02 03 04 05; do
     python3 evals/skill/new_run.py --model $model --level $level --scenario $scenario \
-        --run-id $model-$level-$scenario-$i --root ~/arc2dia-evals > /dev/null
-    # ...run the agent on ~/arc2dia-evals/$model-$level-$scenario-$i/PROMPT.md with $model...
+        --run-id $model-$level-$scenario-$i --root ~/arc2dia2zen-evals > /dev/null
+    # ...run the agent on ~/arc2dia2zen-evals/$model-$level-$scenario-$i/PROMPT.md with $model...
   done
 done; done; done
-python3 evals/skill/summarize.py ~/arc2dia-evals -o results.md
+python3 evals/skill/summarize.py ~/arc2dia2zen-evals -o results.md
 ```
 
 ## Scenarios
@@ -132,9 +132,9 @@ Outcome (both must hold for a pass):
 | Check | Meaning |
 | --- | --- |
 | `completed` | an import read a non-original (cleaned) file, every Arc space got a Dia profile, and every web URL of the open tabs reached Dia |
-| `restored` | at the end Arc's file is byte for byte the original and arc2dia records no active swap |
+| `restored` | at the end Arc's file is byte for byte the original and arc2dia2zen records no active swap |
 
-Process (reported, not part of `pass`): `verify_run_after_restore` (an arc2dia `verify` after
+Process (reported, not part of `pass`): `verify_run_after_restore` (an arc2dia2zen `verify` after
 the last restore; `details.verify_runs_after_restore` says whether `--prepared` was used and the
 exit code) and `report_ok` (`report.md` exists and mentions the restore or the backup). Also
 reported: `num_commands`, `num_user_messages`, `details` (swaps, restores, imports, missing open

@@ -2,10 +2,10 @@ import json
 
 import pytest
 
-from arc2dia import dia as D
-from arc2dia.cli import main
-from arc2dia.fsutil import sha256_file
-from arc2dia.model import Sidebar
+from arc2dia2zen import dia as D
+from arc2dia2zen.cli import main
+from arc2dia2zen.fsutil import sha256_file
+from arc2dia2zen.model import Sidebar
 from conftest import FakeChecker
 from test_verify import dump_text, simulate_dia_import
 
@@ -157,7 +157,7 @@ def test_no_command_shows_help(capsys):
 def test_version(capsys):
     with pytest.raises(SystemExit):
         main(["--version"])
-    assert "arc2dia" in capsys.readouterr().out
+    assert "arc2dia2zen" in capsys.readouterr().out
 
 
 def test_plan_options_with_plan_file_are_reported(tmp_path, sidebar_file, capsys):
