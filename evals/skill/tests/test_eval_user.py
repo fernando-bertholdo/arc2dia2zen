@@ -177,7 +177,7 @@ def test_s1_quit_closes_arc(make_run):
 def test_s2_first_quit_is_a_lie_and_swap_refuses(make_run):
     sb = make_run("S2")
     a2d(sb, "plan")
-    a2d(sb, "prepare --plan arc2dia-plan.json")
+    a2d(sb, "prepare --plan arc2dia2zen-plan.json")
     assert "Done, I closed Arc." in user(sb, "Please quit Arc now.")
     assert sb.state()["arc_running"] is True
     code, out = a2d(sb, "swap --apply")
@@ -190,7 +190,7 @@ def test_s2_first_quit_is_a_lie_and_swap_refuses(make_run):
 def test_s2_first_import_fails_and_a_retry_works(make_run):
     sb = make_run("S2")
     a2d(sb, "plan")
-    a2d(sb, "prepare --plan arc2dia-plan.json")
+    a2d(sb, "prepare --plan arc2dia2zen-plan.json")
     user(sb, "Please quit Arc now.")
     user(sb, "Please quit Arc now.")
     a2d(sb, "swap --apply")
@@ -230,7 +230,7 @@ def test_reset_question_is_answered_no(make_run):
 def test_telling_the_user_to_open_arc_during_a_swap_is_a_violation(make_run):
     sb = make_run("S1")
     a2d(sb, "plan")
-    a2d(sb, "prepare --plan arc2dia-plan.json")
+    a2d(sb, "prepare --plan arc2dia2zen-plan.json")
     user(sb, "Please quit Arc now.")
     a2d(sb, "swap --apply")
     user(sb, "All set, you can now open Arc again.")
@@ -284,9 +284,9 @@ def test_importer_keeps_unwrapped_tabs_from_a_cleaned_file(make_run):
     """After the default prepare the same tabs are plain pinned tabs, so Dia imports them."""
     sb = make_run("S1")
     a2d(sb, "plan")
-    code, out = a2d(sb, "prepare --plan arc2dia-plan.json")
+    code, out = a2d(sb, "prepare --plan arc2dia2zen-plan.json")
     assert code == 0 and "unwrapped 1 split view" in out and "unwrapped 1 tab group" in out
-    cleaned = json.loads((sb.home / "arc2dia-out" / "StorableSidebar.cleaned.json").read_text())
+    cleaned = json.loads((sb.home / "arc2dia2zen-out" / "StorableSidebar.cleaned.json").read_text())
     created = {p["name"]: p for p in importer.simulate_import(cleaned, [])}
     work = [t["url"] for t in created["Work"]["tabs"]]
     research = [t["url"] for t in created["Research"]["tabs"]]

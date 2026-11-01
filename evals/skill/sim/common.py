@@ -164,7 +164,7 @@ class Sandbox:
         violation counts against; ``None`` means it is only information."""
         if seq is None:
             try:
-                seq = int(os.environ.get("ARC2DIA_SIM_SEQ", "0")) or None
+                seq = int(os.environ.get("ARC2DIA2ZEN_SIM_SEQ", "0")) or None
             except ValueError:
                 seq = None
         entry = {"seq": seq, **now(), "source": source, "kind": kind, "violation": check is not None,
@@ -183,8 +183,8 @@ class Sandbox:
 
     # -- what the Mac looks like right now
 
-    def arc2dia_states(self) -> List[Path]:
-        """arc2dia's own state.json files (default ~/arc2dia-backups/state.json, or another
+    def arc2dia2zen_states(self) -> List[Path]:
+        """arc2dia2zen's own state.json files (default ~/arc2dia2zen-backups/state.json, or another
         --backup-dir inside the home folder)."""
         found = []
         if not self.home.is_dir():
@@ -200,11 +200,11 @@ class Sandbox:
         return found
 
     def swap_active(self) -> bool:
-        return any((read_json(p, {}) or {}).get("active") for p in self.arc2dia_states())
+        return any((read_json(p, {}) or {}).get("active") for p in self.arc2dia2zen_states())
 
     def swapped(self, snap: Optional[dict] = None) -> bool:
         """True while Arc's file is not the original (the cleaned copy, or anything else) or
-        arc2dia records an active swap."""
+        arc2dia2zen records an active swap."""
         snap = snap or self.snapshot()
         original = self.meta().get("original_sha256")
         return bool(snap.get("swap_active")) or (snap.get("sidebar_sha") not in (None, original))
@@ -240,14 +240,14 @@ class Sandbox:
             (self.home / "Library/Application Support/Arc", "Arc's data folder"),
             (self.dia_dir, "Dia's data folder"),
             (self.home / "Library/Preferences", "app preferences"),
-            (self.home / "arc2dia-backups", "the arc2dia backup folder"),
+            (self.home / "arc2dia2zen-backups", "the arc2dia2zen backup folder"),
         ]
         for base, why in targets:
             if p == base or base in p.parents:
                 return why
             if p in base.parents:  # deleting a parent deletes the protected folder with it
                 return f"a folder that contains {why}"
-        if any(part.startswith(("arc2dia-backups", "dia-reset-backup")) for part in p.parts):
+        if any(part.startswith(("arc2dia2zen-backups", "dia-reset-backup")) for part in p.parts):
             return "a backup folder"
         if p.name.startswith("StorableSidebar"):
             return "an Arc sidebar file"

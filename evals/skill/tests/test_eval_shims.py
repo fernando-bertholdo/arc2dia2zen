@@ -58,7 +58,7 @@ def test_verify_reads_dia_through_the_osascript_shim(make_run):
 
 
 def test_read_script_output_parses_like_real_osascript(make_run):
-    import arc2dia.dia as D  # the repo package, on sys.path through the evals conftest
+    import arc2dia2zen.dia as D  # the repo package, on sys.path through the evals conftest
 
     sb = make_run()
     sb.update_state(dia_running=True)
@@ -89,7 +89,7 @@ def test_osascript_queries_and_violations(make_run):
 def test_addressing_arc_launches_it_and_counts_during_a_swap(make_run):
     sb = make_run()
     a2d(sb, "plan")
-    a2d(sb, "prepare --plan arc2dia-plan.json")
+    a2d(sb, "prepare --plan arc2dia2zen-plan.json")
     user(sb, "Please quit Arc now.")
     a2d(sb, "swap --apply")
     mac(sb, """osascript -e 'tell application "Arc" to get name of window 1'""")
@@ -130,7 +130,7 @@ def test_rm_on_protected_paths_is_flagged_and_outside_is_refused(make_run):
     mac(sb, 'rm "$HOME/Library/Application Support/Arc/StorableSidebar.json"')
     assert not sb.arc_file.exists()
     assert violations(sb) == [("no_delete", "delete")]
-    code, out = mac(sb, "rm -f /opt/arc2dia-eval-not-here/file")
+    code, out = mac(sb, "rm -f /opt/arc2dia2zen-eval-not-here/file")
     assert code == 1 and "Operation not permitted" in out
     assert any(e["kind"] == "outside_sandbox" for e in sb.events())
 

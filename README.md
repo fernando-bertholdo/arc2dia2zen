@@ -1,8 +1,12 @@
-# arc2dia
+# arc2dia2zen
 
 Move your Arc sidebar to Dia without losing your open tabs or the shape of your nested folders.
 
-arc2dia is a small command-line tool for macOS. It does not replace Dia's own Arc importer: it
+Until 0.2.0 this was arc2dia. The new name is for what comes next: Arc, Dia and Zen are close
+enough to share one community, and Zen Browser support is in progress. Today the tool moves Arc
+to Dia, and `python3 -m arc2dia` still works for a while as an alias.
+
+arc2dia2zen is a small command-line tool for macOS. It does not replace Dia's own Arc importer: it
 prepares a cleaned copy of Arc's sidebar file, lets the official importer read that copy, and then
 puts your original file back, byte for byte. It is written in plain Python 3.9+ with no
 dependencies and no network access.
@@ -15,25 +19,25 @@ and Dia's formats are undocumented and may change. Read the safety notes before 
 ## Quick start
 
 ```sh
-git clone https://github.com/fernando-bertholdo/arc2dia.git && cd arc2dia
-python3 -m arc2dia scan                      # see what Dia's importer would do (read-only)
-python3 -m arc2dia prepare                   # write a cleaned copy to arc2dia-out/
+git clone https://github.com/fernando-bertholdo/arc2dia2zen.git && cd arc2dia2zen
+python3 -m arc2dia2zen scan                      # see what Dia's importer would do (read-only)
+python3 -m arc2dia2zen prepare                   # write a cleaned copy to arc2dia2zen-out/
 # quit Arc (Arc > Quit Arc; closing its window is not enough), then:
-python3 -m arc2dia swap --apply              # put the cleaned copy in Arc's place
-python3 -m arc2dia status                    # Arc not running, cleaned copy in place, no WARNING
+python3 -m arc2dia2zen swap --apply              # put the cleaned copy in Arc's place
+python3 -m arc2dia2zen status                    # Arc not running, cleaned copy in place, no WARNING
 # in Dia: Dia > Import from Another Browser... > Arc, and wait for it to finish
-python3 -m arc2dia status                    # same check again
-python3 -m arc2dia restore --apply           # put your original Arc file back
-python3 -m arc2dia verify --prepared arc2dia-out
+python3 -m arc2dia2zen status                    # same check again
+python3 -m arc2dia2zen restore --apply           # put your original Arc file back
+python3 -m arc2dia2zen verify --prepared arc2dia2zen-out
 ```
 
 Read "The safe workflow" below before running `swap` for real.
 
 ## Use it as an Agent Skill
 
-`skill/arc2dia/` is an Agent Skill: a `SKILL.md` plus the whole tool in one file,
-`scripts/arc2dia.pyz`. Copy the folder into your agent's skills folder (for Claude Code,
-`~/.claude/skills/arc2dia/`) and ask it to migrate your Arc spaces, folders and open tabs to Dia.
+`skill/arc2dia2zen/` is an Agent Skill: a `SKILL.md` plus the whole tool in one file,
+`scripts/arc2dia2zen.pyz`. Copy the folder into your agent's skills folder (for Claude Code,
+`~/.claude/skills/arc2dia2zen/`) and ask it to migrate your Arc spaces, folders and open tabs to Dia.
 The skill walks the agent through the same workflow: it shows you the plan, asks you to quit Arc,
 waits while you run Dia's importer, always restores your original file, and never opens tabs.
 If your agent's permission check stops `swap --apply`, approve it in your app; the skill tells the
@@ -63,12 +67,12 @@ tree.
 
 Re-creating the missing tabs by script is not a good fix either. Tabs created through Dia's
 AppleScript load immediately, and opening about 50 at once froze a 16 GB Mac. Tabs that come in
-through the importer stay unloaded until you click them. arc2dia therefore never opens tabs in Dia;
+through the importer stay unloaded until you click them. arc2dia2zen therefore never opens tabs in Dia;
 it only changes what the importer sees.
 
-## What Dia's importer does, and what arc2dia changes
+## What Dia's importer does, and what arc2dia2zen changes
 
-| In Arc | Dia's importer | With arc2dia |
+| In Arc | Dia's importer | With arc2dia2zen |
 | --- | --- | --- |
 | Space | New Profile (every import creates new ones) | Same; a space can also be left out |
 | Pinned tabs | Pinned tabs, unloaded until clicked | Same |
@@ -85,7 +89,7 @@ it only changes what the importer sees.
 ## How it works
 
 Dia's importer reads Arc's `~/Library/Application Support/Arc/StorableSidebar.json`. With Arc
-quit, arc2dia moves that file into a backup folder, puts a cleaned copy in its place, and waits
+quit, arc2dia2zen moves that file into a backup folder, puts a cleaned copy in its place, and waits
 while you run Dia's importer. Then it copies the original back and checks its SHA-256 hash. Arc
 must stay closed the whole time: when Arc Sync is on (the file has `sidebarSyncState` or
 `firebaseSyncState`), an open Arc could upload the modified sidebar to your other devices.
@@ -102,41 +106,41 @@ other systems if you pass `--sidebar` with a copy of the file.
 Run it from a checkout, without installing anything:
 
 ```sh
-git clone https://github.com/fernando-bertholdo/arc2dia.git && cd arc2dia
-python3 -m arc2dia --help
+git clone https://github.com/fernando-bertholdo/arc2dia2zen.git && cd arc2dia2zen
+python3 -m arc2dia2zen --help
 ```
 
-Or install the `arc2dia` command with `pipx install .` (or `pip install --user .`).
+Or install the `arc2dia2zen` command with `pipx install .` (or `pip install --user .`).
 
 ## The safe workflow
 
-The examples use `arc2dia`; from a checkout, type `python3 -m arc2dia` instead.
+The examples use `arc2dia2zen`; from a checkout, type `python3 -m arc2dia2zen` instead.
 
 **1. Look first.** Nothing is written.
 
 ```sh
-arc2dia scan            # per-space counts and what Dia's importer would do
-arc2dia scan --tree     # the folder outline of each space
+arc2dia2zen scan            # per-space counts and what Dia's importer would do
+arc2dia2zen scan --tree     # the folder outline of each space
 ```
 
-**2. Make a plan.** This writes `arc2dia-plan.json` and prints, for every space, what Dia would end
+**2. Make a plan.** This writes `arc2dia2zen-plan.json` and prints, for every space, what Dia would end
 up with under each folder strategy, so you can compare before choosing.
 
 ```sh
-arc2dia plan
-arc2dia plan --strategy merge-to-top --override "Imported From Edge=to-bookmarks" --force
+arc2dia2zen plan
+arc2dia2zen plan --strategy merge-to-top --override "Imported From Edge=to-bookmarks" --force
 ```
 
 Edit the file if you want per-space choices (see "Plan file" below).
 
-**3. Prepare.** This applies the plan to a copy and writes everything into `arc2dia-out/`. It then
+**3. Prepare.** This applies the plan to a copy and writes everything into `arc2dia2zen-out/`. It then
 re-reads the files it wrote and checks them: the file keeps Arc's shape, no id points to a missing
 item, and every original URL is accounted for (still in the sidebar, in `bookmarks.html`, removed
 as a duplicate with a surviving copy, or dropped with a stated reason).
 
 ```sh
-arc2dia prepare --plan arc2dia-plan.json
-arc2dia scan --tree --sidebar arc2dia-out/StorableSidebar.cleaned.json   # inspect the result
+arc2dia2zen prepare --plan arc2dia2zen-plan.json
+arc2dia2zen scan --tree --sidebar arc2dia2zen-out/StorableSidebar.cleaned.json   # inspect the result
 ```
 
 **4. Quit Arc** completely: Arc > Quit Arc, or Cmd+Q. Closing Arc's window does not quit Arc; it
@@ -152,12 +156,12 @@ devices. Arc may rewrite its sidebar file when you change that setting, so do it
 **5. Swap.** Without `--apply` this only prints what it would do.
 
 ```sh
-arc2dia swap
-arc2dia swap --apply
+arc2dia2zen swap
+arc2dia2zen swap --apply
 ```
 
 It refuses if Arc is running, if the sidebar file changed since `prepare`, if validation failed or
-if another swap is still active. The original goes to `~/arc2dia-backups/<timestamp>/`.
+if another swap is still active. The original goes to `~/arc2dia2zen-backups/<timestamp>/`.
 
 **6. Optional: start from a fresh Dia.** Each import creates new profiles and never merges into
 existing ones, so importing into a Dia you already used gives you a second set. To start clean,
@@ -174,21 +178,21 @@ defaults delete company.thebrowser.dia
 To undo it later, quit Dia, move the new `Dia` folder aside, move the saved one back, and run
 `defaults import company.thebrowser.dia "$HOME/dia-reset-backup/company.thebrowser.dia.plist"`.
 
-**7. Import in Dia.** Right before you start, run `arc2dia status`. It must show
+**7. Import in Dia.** Right before you start, run `arc2dia2zen status`. It must show
 `Arc: not running` and `the sidebar file is still the installed cleaned copy`, with no `WARNING`
 line. Then open Dia and choose Dia > Import from Another Browser... > Arc (a fresh Dia offers it
 during onboarding). Wait until the new profiles appear. Imported pinned tabs only load when you
 click them; do not open them all at once.
 
-When the import is done, run `arc2dia status` again. If Arc is running, quit it (Arc > Quit Arc).
+When the import is done, run `arc2dia2zen status` again. If Arc is running, quit it (Arc > Quit Arc).
 If status warns that the file no longer matches the cleaned copy, Arc or another program wrote it
 and Dia may have read that version: restore (step 8), then start again from step 2.
 
 **8. Restore** the original Arc file. Again, dry run first.
 
 ```sh
-arc2dia restore
-arc2dia restore --apply
+arc2dia2zen restore
+arc2dia2zen restore --apply
 ```
 
 The original is copied back from the backup and its hash is checked. The backup stays where it is.
@@ -198,7 +202,7 @@ Dia was given. Dia must be running with a window open; macOS may ask you to allo
 control Dia.
 
 ```sh
-arc2dia verify --prepared arc2dia-out
+arc2dia2zen verify --prepared arc2dia2zen-out
 ```
 
 Differences that are expected are explained: non-web links Dia drops, open tabs you chose to leave,
@@ -209,7 +213,7 @@ is listed as missing. With `--prepared`, Favorites are compared with the cleaned
 check also fits a test run with `swap --allow-other-source`. If a profile name does not match its
 space, pair them with `--map "Arc space=Dia profile"`.
 
-**10. Open Arc again.** `arc2dia status` tells you at any time whether a swap is still active,
+**10. Open Arc again.** `arc2dia2zen status` tells you at any time whether a swap is still active,
 and warns when the sidebar file changed while it was.
 
 ## Folder strategies
@@ -276,7 +280,7 @@ different names but overlapping content are reported by `scan` and left alone.
 
 ## What `prepare` writes
 
-All files go into the output folder (`arc2dia-out/` by default), never into Arc's folder:
+All files go into the output folder (`arc2dia2zen-out/` by default), never into Arc's folder:
 `StorableSidebar.cleaned.json` (the file Dia will read), `bookmarks.html` (only when something was
 exported), `plan.json` (the plan as applied), `report.txt`, `report.json` (with a ledger entry for
 every original tab: where it was, what happened to it and why) and `manifest.json` (hashes that
@@ -286,7 +290,7 @@ These files contain your browsing data. Do not commit or share them.
 
 ## Safety guarantees
 
-arc2dia never deletes a file. Files are moved into backup folders or copied, and a test checks that
+arc2dia2zen never deletes a file. Files are moved into backup folders or copied, and a test checks that
 the code has no delete calls. The only files it overwrites are its own: earlier outputs (only with
 `--force`) and its bookkeeping files in the backup folder.
 
@@ -299,7 +303,7 @@ active. The original is moved, not rewritten, into a timestamped folder and its 
 swapped, that version is kept in the backup folder too, not overwritten.
 
 `verify` runs an AppleScript that only reads profile names, tab titles and URLs. It never creates,
-loads, closes or focuses tabs, and it does not launch Dia. Print it with `arc2dia verify --print-script`.
+loads, closes or focuses tabs, and it does not launch Dia. Print it with `arc2dia2zen verify --print-script`.
 
 There is no network access: the package uses only the Python standard library and imports no
 networking module (also checked by a test).
@@ -325,7 +329,7 @@ If Arc is opened while the cleaned file is in place and Sync is on, the cleaned 
 your other devices. `restore` puts the local file back, but it cannot undo a sync. Keep Arc quit,
 and turn off Arc's sync before you start if you can.
 
-arc2dia is an independent project. It is not affiliated with, endorsed by or supported by The
+arc2dia2zen is an independent project. It is not affiliated with, endorsed by or supported by The
 Browser Company or Atlassian. Arc and Dia are their trademarks.
 
 ## Development
@@ -337,16 +341,16 @@ python3 -m pytest
 
 Tests use synthetic sidebars built by `tests/fixturegen.py` (all URLs use reserved `example.*`
 domains); `examples/synthetic-StorableSidebar.json` is one of them, ready for
-`arc2dia scan --sidebar examples/synthetic-StorableSidebar.json`. Everything that touches macOS
+`arc2dia2zen scan --sidebar examples/synthetic-StorableSidebar.json`. Everything that touches macOS
 (`pgrep`, `osascript`) sits behind small interfaces, so the suite runs anywhere.
 
 To test the whole flow on a Mac without giving Dia your own data, prepare the synthetic example and
-install it with `arc2dia swap --apply --allow-other-source`. Normally `swap` refuses a cleaned file
+install it with `arc2dia2zen swap --apply --allow-other-source`. Normally `swap` refuses a cleaned file
 that was not prepared from the current Arc file; this flag lets it through for testing, and your
 real Arc file is still backed up and restored as usual. Do this with Dia's data set aside (step 6),
 so the test profiles land in a throwaway Dia.
 
-The code lives in `arc2dia/`: `model.py` (file format), `analysis.py` (scan and prediction),
+The code lives in `arc2dia2zen/`: `model.py` (file format), `analysis.py` (scan and prediction),
 `plan.py`, `transform.py` (the strategies), `bookmarks.py`, `validate.py`, `prepare.py`,
 `swap.py`, `dia.py` (AppleScript), `verify.py` and `cli.py`.
 

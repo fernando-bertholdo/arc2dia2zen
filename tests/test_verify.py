@@ -2,11 +2,11 @@ import re
 
 import pytest
 
-from arc2dia import dia as D
-from arc2dia.errors import Arc2DiaError
-from arc2dia.model import Sidebar, tab_url
-from arc2dia.transform import transform
-from arc2dia.verify import is_github_pull, render_verify, verify
+from arc2dia2zen import dia as D
+from arc2dia2zen.errors import Arc2DiaError
+from arc2dia2zen.model import Sidebar, tab_url
+from arc2dia2zen.transform import transform
+from arc2dia2zen.verify import is_github_pull, render_verify, verify
 from conftest import make_plan, space_by_title
 import fixturegen
 

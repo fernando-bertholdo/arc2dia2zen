@@ -4,8 +4,8 @@ import json
 import pytest
 
 import fixturegen
-from arc2dia.errors import FormatError
-from arc2dia.model import (
+from arc2dia2zen.errors import FormatError
+from arc2dia2zen.model import (
     APPLE_EPOCH_OFFSET,
     Sidebar,
     apple_to_unix,

@@ -13,7 +13,7 @@ from typing import Tuple
 import pytest
 
 HERE = Path(__file__).resolve().parent
-for p in (HERE.parent.parent.parent, HERE.parent):  # the repo root (arc2dia package), evals/skill
+for p in (HERE.parent.parent.parent, HERE.parent):  # the repo root (arc2dia2zen package), evals/skill
     if str(p) not in sys.path:
         sys.path.insert(0, str(p))
 
@@ -46,7 +46,7 @@ def user(sb: Sandbox, message: str) -> str:
 
 
 def tool(sb: Sandbox) -> str:
-    return f'python3 "{sb.skill}/scripts/arc2dia.pyz"'
+    return f'python3 "{sb.skill}/scripts/arc2dia2zen.pyz"'
 
 
 def a2d(sb: Sandbox, args: str) -> Tuple[int, str]:

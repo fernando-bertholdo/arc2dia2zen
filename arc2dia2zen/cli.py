@@ -17,6 +17,7 @@ from .errors import Arc2DiaError
 from .fsutil import (
     ARC_SIDEBAR,
     DEFAULT_BACKUP_ROOT,
+    LEGACY_BACKUP_ROOT,
     DEFAULT_OUT_DIR,
     DEFAULT_PLAN_FILE,
     expand,
@@ -296,14 +297,22 @@ def cmd_swap(args, deps: Deps) -> int:
     return 0
 
 
+def backup_root(arg: str) -> str:
+    """The backup folder to read: the old ~/arc2dia-backups when only that one exists."""
+    if (arg == str(DEFAULT_BACKUP_ROOT) and not expand(DEFAULT_BACKUP_ROOT).exists()
+            and expand(LEGACY_BACKUP_ROOT).exists()):
+        return str(LEGACY_BACKUP_ROOT)
+    return arg
+
+
 def cmd_restore(args, deps: Deps) -> int:
-    for line in restore(args.sidebar, args.backup_dir, args.apply, deps.checker, args.backup):
+    for line in restore(args.sidebar, backup_root(args.backup_dir), args.apply, deps.checker, args.backup):
         _out(line)
     return 0
 
 
 def cmd_status(args, deps: Deps) -> int:
-    for line in status(args.sidebar, args.backup_dir, deps.checker, args.prepared):
+    for line in status(args.sidebar, backup_root(args.backup_dir), deps.checker, args.prepared):
         _out(line)
     return 0
 

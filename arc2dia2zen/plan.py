@@ -118,7 +118,7 @@ class Plan:
 
     def to_json(self) -> dict:
         return {
-            "arc2dia_plan_version": self.version,
+            "arc2dia2zen_plan_version": self.version,
             "source": {"path": self.source_path, "sha256": self.source_sha256},
             "path_separator": self.path_separator,
             "spaces": [sp.to_json() for sp in self.spaces],
@@ -132,7 +132,8 @@ _SPACE_KEYS = {
     "open_tabs", "open_tabs_folder_name", "open_tabs_split_views", "open_tabs_tab_groups", "pinned_wrappers",
     "drop_empty_folders", "non_web", "merge_bookmark_folders",
 }
-_TOP_KEYS = {"arc2dia_plan_version", "source", "path_separator", "spaces"}
+# "arc2dia_plan_version" is the key plans had before the rename to arc2dia2zen (0.2.0).
+_TOP_KEYS = {"arc2dia2zen_plan_version", "arc2dia_plan_version", "source", "path_separator", "spaces"}
 
 
 def _check_keys(obj: dict, allowed: set, where: str) -> None:
@@ -210,9 +211,9 @@ def plan_from_json(data: Any) -> Plan:
     if not isinstance(data, dict):
         raise PlanError("plan: expected a JSON object")
     _check_keys(data, _TOP_KEYS, "plan")
-    version = data.get("arc2dia_plan_version")
+    version = data.get("arc2dia2zen_plan_version", data.get("arc2dia_plan_version"))
     if version != PLAN_VERSION:
-        raise PlanError(f"plan: arc2dia_plan_version must be {PLAN_VERSION}, got {version!r}")
+        raise PlanError(f"plan: arc2dia2zen_plan_version must be {PLAN_VERSION}, got {version!r}")
     spaces_raw = data.get("spaces")
     if not isinstance(spaces_raw, list):
         raise PlanError("plan: spaces must be a list")

@@ -67,8 +67,8 @@ def build_env(sb: Sandbox, seq: int) -> dict:
         "USER": "example",
         "LOGNAME": "example",
         "SHELL": "/bin/zsh",
-        "ARC2DIA_SIM": str(sb.root),
-        "ARC2DIA_SIM_SEQ": str(seq),
+        "ARC2DIA2ZEN_SIM": str(sb.root),
+        "ARC2DIA2ZEN_SIM_SEQ": str(seq),
     })
     for k in ("PYTHONHOME", "PYTHONSTARTUP", "PYTHONSAFEPATH", "PYTHONNOUSERSITE", "ENV", "ZDOTDIR", "OLDPWD"):
         env.pop(k, None)

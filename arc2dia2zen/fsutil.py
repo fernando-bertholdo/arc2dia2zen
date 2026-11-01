@@ -15,9 +15,11 @@ PathLike = Union[str, "os.PathLike[str]"]
 ARC_SIDEBAR = Path("~/Library/Application Support/Arc/StorableSidebar.json")
 DIA_SUPPORT_DIR = Path("~/Library/Application Support/Dia")
 DIA_DEFAULTS_DOMAIN = "company.thebrowser.dia"
-DEFAULT_BACKUP_ROOT = Path("~/arc2dia-backups")
-DEFAULT_OUT_DIR = Path("arc2dia-out")
-DEFAULT_PLAN_FILE = Path("arc2dia-plan.json")
+DEFAULT_BACKUP_ROOT = Path("~/arc2dia2zen-backups")
+# Backups went here before the rename to arc2dia2zen (0.2.0); restore and status still look.
+LEGACY_BACKUP_ROOT = Path("~/arc2dia-backups")
+DEFAULT_OUT_DIR = Path("arc2dia2zen-out")
+DEFAULT_PLAN_FILE = Path("arc2dia2zen-plan.json")
 
 
 def expand(path: PathLike) -> Path:
@@ -47,7 +49,7 @@ def iso_now() -> str:
 def write_bytes_atomic(path: PathLike, data: bytes) -> None:
     """Write via a temporary file in the same directory, then rename it into place."""
     path = Path(path)
-    tmp = path.with_name(f".{path.name}.arc2dia-tmp")
+    tmp = path.with_name(f".{path.name}.arc2dia2zen-tmp")
     with open(tmp, "wb") as fh:
         fh.write(data)
         fh.flush()
@@ -58,7 +60,7 @@ def write_bytes_atomic(path: PathLike, data: bytes) -> None:
 def copy_file_atomic(src: PathLike, dst: PathLike) -> None:
     """Copy ``src`` to ``dst`` (contents, mode and times) through a temporary file."""
     dst = Path(dst)
-    tmp = dst.with_name(f".{dst.name}.arc2dia-tmp")
+    tmp = dst.with_name(f".{dst.name}.arc2dia2zen-tmp")
     shutil.copy2(src, tmp)
     os.replace(tmp, dst)
 

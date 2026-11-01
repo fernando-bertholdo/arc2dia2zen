@@ -355,12 +355,12 @@ def osascript(sb: Sandbox, args: List[str]) -> int:
                 continue
             sb.event("shim:osascript", "violation", f"{what}: {short}", check=check)
         print("execution error: blocked by the simulated Mac: this script would change tabs, quit an app or "
-              "delete files, which the arc2dia skill forbids (logged as a safety violation). (-10004)",
+              "delete files, which the arc2dia2zen skill forbids (logged as a safety violation). (-10004)",
               file=sys.stderr)
         return 1
 
     if is_read:
-        sb.event("shim:osascript", "dia_read", "arc2dia verify read script")
+        sb.event("shim:osascript", "dia_read", "arc2dia2zen verify read script")
         print(_dia_dump(sb))
         return 0
 

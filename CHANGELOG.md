@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.0 (2026-11-01)
+
+Renamed to arc2dia2zen. Arc, Dia and Zen are close enough to share one community, and Zen
+support comes next.
+
+- The package, the command (`python3 -m arc2dia2zen`), the skill (`skill/arc2dia2zen/`,
+  `arc2dia2zen.pyz`) and the default files (`arc2dia2zen-out/`, `arc2dia2zen-plan.json`,
+  `~/arc2dia2zen-backups/`) carry the new name.
+- Kept under the old name for now: `python3 -m arc2dia` (prints a note, then runs the new
+  command), plans with the `arc2dia_plan_version` key, and backups in `~/arc2dia-backups/`,
+  which `restore` and `status` still find when the new folder does not exist.
+- Entries below keep the old name, as released.
+
 ## 0.1.3 (2026-10-25)
 
 Fixes from the first end-to-end runs on a real Mac with real Dia, with real data and with the

@@ -3,7 +3,7 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "arc2dia"
+name = "arc2dia2zen"
 dynamic = ["version"]
 description = "Move an Arc browser sidebar to Dia without losing open tabs or nested folders"
 readme = "README.md"
@@ -20,13 +20,14 @@ classifiers = [
 ]
 
 [project.scripts]
-arc2dia = "arc2dia.cli:main"
+arc2dia2zen = "arc2dia2zen.cli:main"
+arc2dia = "arc2dia2zen.cli:main"
 
 [tool.setuptools]
-packages = ["arc2dia"]
+packages = ["arc2dia2zen", "arc2dia"]
 
 [tool.setuptools.dynamic]
-version = { attr = "arc2dia.__version__" }
+version = { attr = "arc2dia2zen.__version__" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

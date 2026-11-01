@@ -1,5 +1,5 @@
 """A stand-in for Dia's "Import from Another Browser... > Arc", written independently of the
-arc2dia package so the eval does not grade the tool with its own parser.
+arc2dia2zen package so the eval does not grade the tool with its own parser.
 
 Observed behaviour it copies: every Arc space becomes a NEW Dia profile (a clashing name gets
 " 2", " 3"...); pinned tabs are imported, including those inside folders, which are flattened

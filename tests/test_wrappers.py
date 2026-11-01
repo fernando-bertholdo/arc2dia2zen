@@ -7,13 +7,13 @@ import json
 import pytest
 
 import fixturegen
-from arc2dia import bookmarks as B
-from arc2dia.analysis import predict_import, render_scan, scan
-from arc2dia.errors import PlanError
-from arc2dia.model import Sidebar, tab_url
-from arc2dia.plan import FolderOverride, plan_from_json
-from arc2dia.transform import FATE_SIDEBAR, transform
-from arc2dia.validate import structure_problems, validate
+from arc2dia2zen import bookmarks as B
+from arc2dia2zen.analysis import predict_import, render_scan, scan
+from arc2dia2zen.errors import PlanError
+from arc2dia2zen.model import Sidebar, tab_url
+from arc2dia2zen.plan import FolderOverride, plan_from_json
+from arc2dia2zen.transform import FATE_SIDEBAR, transform
+from arc2dia2zen.validate import structure_problems, validate
 from conftest import find_folder, make_plan, space_by_title
 
 WRAPPED_URLS = {
@@ -177,7 +177,7 @@ def test_scan_says_dia_drops_wrapped_tabs(rich_sb):
 
 def _plan_json(sb, **extra):
     space = {"space_id": sb.spaces[0].id, **extra}
-    return {"arc2dia_plan_version": 1, "spaces": [space]}
+    return {"arc2dia2zen_plan_version": 1, "spaces": [space]}
 
 
 def test_plan_file_option():

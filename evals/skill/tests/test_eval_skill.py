@@ -15,8 +15,8 @@ import new_run
 from sim.common import REPO_ROOT
 
 VARIANTS = {lv: (new_run.VARIANTS / lv / "SKILL.md").read_text(encoding="utf-8") for lv in new_run.LEVELS}
-SHIPPED = REPO_ROOT / "skill" / "arc2dia" / "SKILL.md"
-PYZ = REPO_ROOT / "skill" / "arc2dia" / "scripts" / "arc2dia.pyz"
+SHIPPED = REPO_ROOT / "skill" / "arc2dia2zen" / "SKILL.md"
+PYZ = REPO_ROOT / "skill" / "arc2dia2zen" / "scripts" / "arc2dia2zen.pyz"
 
 
 def frontmatter(text):
@@ -34,7 +34,7 @@ def test_frontmatter_is_the_same_everywhere():
     assert all(fm == fms[0] for fm in fms)
     fm = fms[0]
     assert set(fm) == {"name", "description"}
-    assert fm["name"] == "arc2dia" == SHIPPED.parent.name
+    assert fm["name"] == "arc2dia2zen" == SHIPPED.parent.name
     assert 100 < len(fm["description"]) <= 1024 and "Use when" in fm["description"]
 
 
@@ -52,8 +52,8 @@ def test_lengths():
 def test_every_level_carries_the_facts_and_rules(level):
     t = VARIANTS[level]
     for needle in ("2026", "StorableSidebar.json", "Import from Another Browser", "new", "open tabs",
-                   '<skill dir>/scripts/arc2dia.pyz"', "scan", "plan", "prepare --plan arc2dia-plan.json",
-                   "swap --apply", "restore --apply", "verify --prepared arc2dia-out", "status",
+                   '<skill dir>/scripts/arc2dia2zen.pyz"', "scan", "plan", "prepare --plan arc2dia2zen-plan.json",
+                   "swap --apply", "restore --apply", "verify --prepared arc2dia2zen-out", "status",
                    "open <url>", "Arc Sync", "delete", "kill", "explicit", "language"):
         assert needle in t, (level, needle)
 
@@ -74,7 +74,7 @@ def test_l3_has_templates_decision_table_and_checklist():
     # command blocks are spelled out in full, never with the A2D shorthand
     for line in t.splitlines():
         if line.startswith("    cd ~"):
-            assert '"<skill dir>/scripts/arc2dia.pyz"' in line, line
+            assert '"<skill dir>/scripts/arc2dia2zen.pyz"' in line, line
 
 
 def test_pyz_runs_and_matches_the_package():
@@ -104,8 +104,8 @@ def test_pyz_runs_on_python_3_9():
 
 
 def test_build_script_rebuilds_the_same_contents(tmp_path):
-    out = tmp_path / "arc2dia.pyz"
-    env = dict(os.environ, ARC2DIA_PYZ_OUT=str(out), PYTHON=sys.executable)
+    out = tmp_path / "arc2dia2zen.pyz"
+    env = dict(os.environ, ARC2DIA2ZEN_PYZ_OUT=str(out), PYTHON=sys.executable)
     proc = subprocess.run([str(REPO_ROOT / "scripts" / "build_skill.sh")], env=env, capture_output=True, text=True)
     assert proc.returncode == 0, proc.stderr
     with zipfile.ZipFile(out) as a, zipfile.ZipFile(PYZ) as b:

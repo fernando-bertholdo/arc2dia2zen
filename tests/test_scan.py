@@ -1,8 +1,8 @@
 import json
 
 import fixturegen
-from arc2dia.analysis import find_duplicate_trees, find_similar_trees, render_scan, scan
-from arc2dia.model import Sidebar
+from arc2dia2zen.analysis import find_duplicate_trees, find_similar_trees, render_scan, scan
+from arc2dia2zen.model import Sidebar
 from conftest import space_by_title
 
 
